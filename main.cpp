@@ -221,8 +221,8 @@ void testResultLedLoop(int result)
 bool verifyADCreadings( bool s1, bool s2, bool s3, bool s4, bool s5, bool s6,
 		float r1, float r2, float r3, float r4, float r5, float r6)
 {
-	float offmax=0.05;
-	float onmin=0.25, onmax=0.55;
+	float offmax=0.03;
+	float onmin=0.97, onmax=1.0;
 
 	if(!s1)
 		if(r1>offmax) return false;
@@ -356,8 +356,8 @@ bool testPortX11()
 	AnalogIn I5(PA_5);
 	AnalogIn I6(PA_6);
 
-	/*
-	O1=O2=O3=O4=O5=O6=0;
+
+	/*O1=O2=O3=O4=O5=O6=0;
 	pc.printf("%f %f %f %f %f %f\n",I1.read(),I2.read(),I3.read(),I4.read(),I5.read(),I6.read());
 	O1=1;
 	wait(0.01);
@@ -377,8 +377,11 @@ bool testPortX11()
 	O6=1;
 	wait(0.01);
 	pc.printf("%f %f %f %f %f %f\n",I1.read(),I2.read(),I3.read(),I4.read(),I5.read(),I6.read());
-
+	*/
+/*
 	above will output when X11 upper & lower connected with straight RJ45:
+
+	PROTOTYPE 003
 	0.003663 0.000488 0.000733 0.000733 0.000733 0.000488
 	0.479609 0.001954 0.000733 0.000488 0.000733 0.000733
 	0.479609 0.330159 0.001465 0.000733 0.000733 0.000488
@@ -386,6 +389,15 @@ bool testPortX11()
 	0.479609 0.330403 0.329426 0.331136 0.001709 0.000488
 	0.480830 0.330159 0.329670 0.330891 0.330647 0.001465
 	0.479365 0.330403 0.329426 0.331136 0.330647 0.274969
+
+	FINAL 004
+	0.007326 0.002442 0.002442 0.002930 0.002686 0.002686
+	0.999512 0.015140 0.002686 0.002930 0.002686 0.002442
+	0.999512 0.995849 0.015140 0.002930 0.002442 0.002686
+	0.999512 0.996093 0.996093 0.017338 0.002930 0.002686
+	0.999267 0.995849 0.996093 0.995849 0.017338 0.002686
+	0.998535 0.995849 0.996093 0.996093 0.996337 0.015629
+	0.998535 0.996337 0.996093 0.995849 0.996093 0.994139
 	*/
 
 
