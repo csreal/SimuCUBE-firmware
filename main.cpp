@@ -154,8 +154,8 @@ void SMPortSetMaster(bool me)
 }
 
 
-USBMouse mouse;
-#include "USBGameController.h"
+//USBMouse mouse;
+//#include "USBGameController.h"
 
 AnalogIn ADCUpperPin3(PC_5);
 AnalogIn ADCUpperPin2(PB_0);
@@ -424,94 +424,24 @@ bool testPortX11()
 	return true;//all passed
 }
 
-int main() {
-	smbus h;
-	h=smOpenBus("MBEDSERIAL");
-	SMSerial.baud(460800);
-	pc.baud(230400);
-    SM_STATUS stat;
+int main()
+{
+	DigitalOut HSIN1(PE_11);
+	DigitalOut HSIN2(PE_9);
+	SMPortSetMaster(false);
 
-    led1green=1;
-    led3green=1;
-    led2red=1;
-
-	Timer t;
-	t.start();
-	EncoderInitialize();
-
-	//move mouse, tester need watch if cursor moves
-    mouse.move(10, 10);
-    wait(0.2);
-    mouse.move(-10, -10);
-    wait(0.2);
-    mouse.move(10, 10);
-    wait(0.2);
-    mouse.move(-10, -10);
-    wait(0.2);
-    mouse.move(10, 10);
-    wait(0.2);
-    for(int i=0;i<50;i++)//to top corner
-    {
-    	mouse.move(-100, -100);
-    	wait(0.01);
-    }
-
-
-	//test ports. straight wired RJ45s must be connected from upper->lower on X11 & X12
-	if(testPortX11()==false)
-		testResultLedLoop(3);
-
-	if(testPortX12()==false)
-		testResultLedLoop(4);
-
-	//init drive
-	DriveEnable=1;
-	bool done=false;
-	while(!done)
+	HSIN1=1;
+	while(1)
 	{
-        smint32 read;
-        stat=smRead1Parameter(h,1,SMP_STATUS,&read);
-        if(stat!=SM_OK)
-        {
-        	testResultLedLoop(0);
-        }
-        if(t.read()>15)//timeout
-        {
-        	testResultLedLoop(1);
-        }
-        if(read&STAT_SERVO_READY)
-        	done=true;
+	    led1green=!led1green;
+	    led3green=!led3green;;
+	    led2red=!led2red;
+	    HSIN1=!HSIN1;
+	    HSIN2=!HSIN2;
+
+	    wait(2);
 	}
-	TIM2->CNT = 0x0000;
 
-	//verify that its pos mode
-    smint32 read;
-    stat|=smRead1Parameter(h,1,SMP_CONTROL_MODE,&read);
-    if(read!=SM_OK)
-    {
-    	testResultLedLoop(0);
-    }
-    if(read!=CM_POSITION)
-    	testResultLedLoop(5);
-
-
-	//test driving
-	smSetParameter(h,1,SMP_ABSOLUTE_SETPOINT,0);
-	wait(2);
-	TIM2->CNT = 0x0000;
-	smSetParameter(h,1,SMP_ABSOLUTE_SETPOINT,-5000);
-	wait(2);
-	pc.printf("a %d\n",EncoderRead());
-	if(EncoderRead()<4000||EncoderRead()>6000)
-		testResultLedLoop(2);
-	smSetParameter(h,1,SMP_ABSOLUTE_SETPOINT,5000);
-	wait(2);
-	if(EncoderRead()<-6000||EncoderRead()>-4000)
-		testResultLedLoop(2);
-	pc.printf("b %d\n",EncoderRead());
-
-	//all pass
-	testResultLedLoop(-1);
 
     while(1) {}
 }
