@@ -1,16 +1,19 @@
 #include "mbed.h"
 #include "USBHID.h"
- 
+#include "cFFBDevice.h"
 
 DigitalOut led1(PD_15);
 DigitalOut led2(PD_14);
  
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_tim.h"
+#include "stm32f4xx.h"
 
 Serial SMSerial(PB_10, PB_11); // tx, rx
 DigitalOut SMSerialTXEN(PD_8);
 bool SMSerialMasterIsMe=true;
+
+cFFBDevice gFFBDevice;
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,7 +55,6 @@ int EncoderRead()
 	return TIM2->CNT;
 }
 
-
 int SMPortWrite(const char *data, int len)
 {
 	int i;
@@ -82,7 +84,7 @@ int SMPortReadByte( char *byte )
 		return 0;
 
 	//try reading a byte
-	bool done=false;
+//	bool done=false;
 	do
 	{
 		if(SMSerial.readable())
@@ -139,63 +141,80 @@ AnalogIn ADCUpperPin1(PB_1);
 Serial pc(PA_9, PA_10); // tx, rx
 #include "simplemotion.h"
 
-int main() {
-    int32_t i = 0;
-    int16_t throttle = 0;
-    int16_t rudder = 0;
-    int16_t x = 0;
-    int16_t y = 0;
-    int32_t radius = 120;
-    int32_t angle = 0;
-    uint32_t button = 0;
-    int8_t hat = 0;
+void SystemClock_Config(void)
+{
+	RCC_OscInitTypeDef RCC_OscInitStruct;
+	RCC_ClkInitTypeDef RCC_ClkInitStruct;
+
+	__HAL_RCC_PWR_CLK_ENABLE();
+
+	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+	RCC_OscInitStruct.HSICalibrationValue = 16;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+	RCC_OscInitStruct.PLL.PLLM = 8;
+	RCC_OscInitStruct.PLL.PLLN = 168;
+	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+	RCC_OscInitStruct.PLL.PLLQ = 4;
+	HAL_RCC_OscConfig(&RCC_OscInitStruct);
+
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+	                            | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+	HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
+
+//	HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);
+
+//	HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+
+	  /* SysTick_IRQn interrupt configuration */
+//	HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+}
+
+int main() 
+{
+	HAL_Init();
+	SystemClock_Config();
+
+	gFFBDevice.mSMBusHandle = smOpenBus("MBEDSERIAL");
+	SMSerial.baud(460800);
+
+	int32_t i = 0;
 
     pc.baud(230400);
     pc.printf("Hello World!\n\r");
 
     EncoderInitialize();
-    while (1) {
-        // Basic Joystick
-        throttle = (i >> 8) & 0xFF; // value -127 .. 128
-        rudder = (i >> 8) & 0xFF;   // value -127 .. 128
-        button=i;
-        hat    = (i >> 8) & 0x07;   // value 0..7 or 8 for neutral
-        i++;
-        angle += 3;
-
-        x=EncoderRead();
-        y=0;
-        joystick.update(throttle, throttle,throttle,rudder, x, y, button, hat);
+	InitializeTorqueCommand();
+    while (1) 
+    {
+	    s32 x = EncoderRead();
+	    gFFBDevice.CalcTorqueCommand(x);
+	    
+	    i += 32;
+		uint16_t throttle = i & 0xffff;
+	    uint16_t rudder = (i + 10000) & 0xffff;
+	    uint16_t clutch = (i + 20000) & 0xffff;
+	    uint16_t brake = (i + 30000) & 0xffff;
+	    uint32_t button = i;
+	    int8_t hat    = (i >> 8) & 0x07;
+	    uint16_t y = (i + 40000) & 0xffff;
+	    x = constrain(x + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
+        joystick.update(brake, clutch,throttle,rudder, x, y, button, hat);
 
         if(joystick.getPendingReceivedReportCount())
         {
         	HID_REPORT recv_report=joystick.getReceivedReport();
-            pc.printf("recv (%d bytes): ",recv_report.length);
-            for(int i = 0; i < recv_report.length; i++) {
-                pc.printf("%d ", recv_report.data[i]);
-            }
-            pc.printf("\r\n");
-        	joystick.handleReceivedHIDReport(recv_report);
-            /*
-             * wheelcheck gives output like:
-				Hello World!
-
-				recv (2 bytes): 13 4
-				recv (2 bytes): 13 3
-				recv (2 bytes): 14 255
-				recv (2 bytes): 13 1
-				recv (2 bytes): 13 1
-				recv (2 bytes): 13 1
-				recv (2 bytes): 13 1
-				recv (2 bytes): 13 1
-
-				don't know why it outputs only "disable" command after first
-             */
+	       	joystick.handleReceivedHIDReport(recv_report);
         }
-
-        wait(0.001);
+	    wait(0.001*CONTROL_PERIOD_MS);
     }
-
     pc.printf("Bye World!\n\r");
 }
 
