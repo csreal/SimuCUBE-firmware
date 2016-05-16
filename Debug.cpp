@@ -101,21 +101,14 @@ void LogTextLf(const char *text)
 }
 
 
+//P stands for program memory, old AVR stuff
 void LogTextP(const char *text)
 {
 #ifdef _DEBUG_LOG
 	if (gDebugMode == DEBUG_TO_NONE)
 		return;
 
-	while (1)
-	{
-		char c = pgm_read_byte(text++);
-		if (c == 0)
-			break;
-		if (c == '\n')
-			LogSendByte('\r');	// CR+LF
-		LogSendByte(c);
-	}
+	LogText(text);
 #endif
 }
 
@@ -222,7 +215,7 @@ b8 DoDebug(const u8 type)
 void LogSendByte(u8 data)
 {
 #ifdef _DEBUG_LOG
-	DEBUG_PIPE.write(data);
+	DEBUG_PIPE.putc(data);
 #endif
 }
 

@@ -40,7 +40,7 @@ extern const u8 DEBUG_DETAIL;
 */
 extern volatile u8 gDebugMode;
 
-//#define _DEBUG_LOG
+#define _DEBUG_LOG
 
 // Returns true if debug settings contain all of the given attributes
 // (see above constants DEBUG_xxx).
@@ -82,7 +82,9 @@ void FlushDebugBuffer(void);
 #ifdef USE_LCD
 #define DEBUG_PIPE		lcd
 #else
-#define DEBUG_PIPE		Serial
+#include "mbed.h"
+extern Serial pc;
+#define DEBUG_PIPE	pc
 #endif
 
 //#define _DEBUG
