@@ -24,9 +24,11 @@ s32 SpringEffect(s32 err, s32 mag)
 
 //--------------------------------------------------------------------------------------------------------
 
-s32 cFFBDevice::CalcTorqueCommand (s32 pos)
+s32 cFFBDevice::CalcTorqueCommand (s32 *readEncoderPos)
 {
+	static s32 pos=0;
 	SM_STATUS stat;
+	static s32 prev_cumul_damper=0;
 	s32 cumul_damper=0;
 	s32 command = 0;
 	{
@@ -78,8 +80,16 @@ s32 cFFBDevice::CalcTorqueCommand (s32 pos)
 		command += SpringEffect(-pos, mConfig.mDesktopSpringGain);
 		cumul_damper += mConfig.mDesktopDamperGain;
 	}
-	stat = smSetParameter(mSMBusHandle, 1, SMP_TORQUE_EFFECT_DAMPING, cumul_damper);
+	if(prev_cumul_damper!=cumul_damper)//send only if changed to avoid update rate to drop
+		stat = smSetParameter(mSMBusHandle, 1, SMP_TORQUE_EFFECT_DAMPING, cumul_damper);
+	prev_cumul_damper=cumul_damper;
+
+	command += SpringEffect(-pos, 10);
 	command = ConstrainEffect(command);
-	SetTorque(command);
+	/*static s16 trq=0;
+	trq+=10;
+	SetTorque(trq);*/
+	pos=SetTorque(command);//one call consumes total of ~0.35ms. with all code and 1ms delay in main loop, the update rate seems to be currently 33Hz (other code east rest of the time).
+	*readEncoderPos=pos;
 	return (command);
 }

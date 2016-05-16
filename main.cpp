@@ -2,8 +2,9 @@
 #include "USBHID.h"
 #include "cFFBDevice.h"
 
-DigitalOut led1(PD_15);
-DigitalOut led2(PD_14);
+DigitalOut led4(PD_15);
+DigitalOut led5(PD_14);
+DigitalOut led6(PD_13);
  
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_tim.h"
@@ -177,13 +178,127 @@ void SystemClock_Config(void)
 //	HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
-int main() 
+enum SystemStatus {BeforeInit, DriveInit, DriveConnectionError, DriveWaitClearfaults, DriveWaitReady, DriveFWUnsupported, Operational };
+volatile SystemStatus currentSystemStatus=BeforeInit;
+
+//call this when system status changes. TODO implement some way of telling user about the status
+void broadcastSystemStatus(SystemStatus status, bool stopHere=false)
+{
+	currentSystemStatus=status;
+
+	//now on errors, just do dummy infinte loop with led blinking
+	//FIXME replace with this some way to tell user thru USB too
+	if(stopHere)
+	{
+		SMPortSetMaster(false);//release control of SM bus to allow Granity connection
+
+		while(1)
+		{
+			wait(0.1);
+		}
+	}
+}
+
+Ticker ledBlinker;
+void controlLeds()//timer, called at every 0.5secs
+{
+	switch(currentSystemStatus)//blink some leds
+	{
+		case DriveConnectionError:
+			led4=!led4;
+			break;
+		case DriveWaitClearfaults:
+			led5=!led5;
+			break;
+		case DriveWaitReady:
+			led6=!led6;
+			break;
+		case DriveFWUnsupported:
+			led4=!led4;
+			led5=!led5;
+			break;
+		case BeforeInit:
+			led4=!led4;
+			led5=!led5;
+			led6=!led6;
+			break;
+		case Operational:
+			led4=led5=0;
+			led6=1;
+			break;
+		default:
+			led4=led5=led6=1;
+			break;
+	}
+}
+
+
+bool InitializeDrive()
+{
+	gFFBDevice.mSMBusHandle = smOpenBus("MBEDSERIAL");
+	SMSerial.baud(460800);
+
+	broadcastSystemStatus(DriveInit);
+
+	//read some ioni drive parameters
+	smint32 driveStatus, initialPosition, homingConfigurationBits, driveFWversion;
+	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &driveFWversion);
+
+	led4=led5=led6=0;
+
+	//comm error
+	if(getCumulativeStatus(gFFBDevice.mSMBusHandle)!=SM_OK)
+		broadcastSystemStatus(DriveConnectionError,true);
+
+	if(driveFWversion<1093)//V1092 would be enough, but it has bug in SMP_FAULT_BEHAVIOR which is fixed in the next version
+		broadcastSystemStatus(DriveFWUnsupported, true);
+
+	//disable enable drive watchdog: if communication is lost for over 1sec or has error, drive will go fault state
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1|(100<<8));
+
+	//if drive is in fault state, wait that user resets the faults with STO input
+	while(driveStatus&STAT_FAULTSTOP )
+	{
+		broadcastSystemStatus(DriveWaitClearfaults);
+		smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+		wait(0.5);
+	}
+
+	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+	//wait drive to initialize (wait for phasing & homing if configured)
+	while(!(driveStatus&STAT_SERVO_READY) )
+	{
+			broadcastSystemStatus(DriveWaitReady);
+			smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+			wait(0.5);
+	}
+
+	//read position counter
+	volatile int p1,p2;
+	smint32 positionFB=0;
+	p1=SetTorque(0);//call this twice to have 16 bit differential encoder unwrapper initialized
+	p2=SetTorque(0);
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ACTUAL_POSITION_FB, &positionFB);//read 32 bit position
+	resetPositionCountAt(positionFB);
+
+	//enable drive watchdog: if communication is lost for over 0.3sec or has error, drive will go fault state
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1 | (30<<8));
+
+	broadcastSystemStatus(Operational);
+
+
+	return true;
+}
+
+int main()
 {
 	HAL_Init();
 	SystemClock_Config();
 
-	gFFBDevice.mSMBusHandle = smOpenBus("MBEDSERIAL");
-	SMSerial.baud(460800);
+	ledBlinker.attach(&controlLeds,0.5);
+
+	InitializeDrive();
 
 	int32_t i = 0;
 
@@ -194,8 +309,9 @@ int main()
 	InitializeTorqueCommand();
     while (1) 
     {
-	    s32 x = EncoderRead();
-	    gFFBDevice.CalcTorqueCommand(x);
+	    //s32 x = EncoderRead();//direct read of quadrature encoder
+    	s32 encoderCounter;
+	    gFFBDevice.CalcTorqueCommand(&encoderCounter);//reads encoder counter too
 	    
 	    i += 32;
 		uint16_t throttle = i & 0xffff;
@@ -205,8 +321,8 @@ int main()
 	    uint32_t button = i;
 	    int8_t hat    = (i >> 8) & 0x07;
 	    uint16_t y = (i + 40000) & 0xffff;
-	    x = constrain(x + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
-        joystick.update(brake, clutch,throttle,rudder, x, y, button, hat);
+	    encoderCounter = constrain(encoderCounter + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
+        joystick.update(brake, clutch,throttle,rudder, encoderCounter, y, button, hat);
 
         if(joystick.getPendingReceivedReportCount())
         {
@@ -237,7 +353,7 @@ test=1;
         //mouse.move(1, 1);     //moves the mouse down and to the left
         //keyboard.keyCode('s');
 
-        led1 = !led1;     //cycles the LED on/off
+        led4 = !led4;     //cycles the LED on/off
         wait(0.05);        //waits 2 seconds, then repeats
 
         if(cnt&32)

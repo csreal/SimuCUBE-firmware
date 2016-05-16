@@ -90,7 +90,7 @@ public:
 
 	void SetDefault()	{ mConfig.SetDefault(); }
 
-	s32 CalcTorqueCommand(s32 pos);
+	s32 CalcTorqueCommand(s32 *readEncoderPos);
 	
 	cDeviceConfig mConfig;
 
