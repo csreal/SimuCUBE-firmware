@@ -224,3 +224,23 @@ void FlushDebugBuffer(void)
 {
 }
 
+debugVerbosityLevel FFBDebugVerbosity=DTrace;//high value indicates more output to debug log, Off is disabled
+
+#ifdef FFB_ENABLE_DEBUG_PRINTS
+void debugPrint( debugVerbosityLevel verbositylevel, char const *format, ...)
+{
+    va_list fmtargs;
+    char buffer[1024];
+
+    if(verbositylevel <= FFBDebugVerbosity )
+    {
+        va_start(fmtargs,format);
+        vsnprintf(buffer,sizeof(buffer)-1,format,fmtargs);
+        va_end(fmtargs);
+        DEBUG_PIPE.printf("%d: %s\n", (int)verbositylevel, buffer);
+    }
+}
+#else
+#define debugPrint(...)
+#endif
+

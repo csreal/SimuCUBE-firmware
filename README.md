@@ -50,3 +50,20 @@ The binary may be loaded to SimuCUBE with two methods:
 
 ## LICENSE
 This project has been licensed with Apache license version 2.0. For full details, see http://www.apache.org/licenses/LICENSE-2.0.
+
+## DEVELOPMENT NOTES
+ 
+### RECENT CHANGES
+
+- Added IONI initialization (wait for ready state) at power on
+- Added led blinking status indicator
+- Using SM library fast setpoint & read of encoder position (encoder no longer read from quadrature inputs) 
+- Added debug printing
+
+### WORK IN PROGRESS ITEMS
+
+This section lists currently active development topics
+
+- Some FFB commands are handled in main loop and some in ISRs (USBCallback_request and USBCallback_requestCompleted). Maybe most of code not thread/ISR safe and simultaneous execution might corrupt some variables.
+- What are the unfinished commented out parts in these IRSs? How to implement. HID_SET_PROTOCOL at USBCallback_request for example.
+- Serial port debug printing from ISR should not be done, it's not ISR safe according to mbed. Implement ISR safe buffering and printing from main instead.

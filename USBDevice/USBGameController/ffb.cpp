@@ -99,7 +99,7 @@ void FreeEffect(uint8_t id)
 	if (id > MAX_EFFECTS)
 		return;
 
-	LogText("Free effect ");
+	debugPrint(DMid, "Free effect id %d",id);
 	LogBinaryLf(&id,1);
 	gEffectStates[id].state = 0;
 }
@@ -150,11 +150,10 @@ bool USBGameController::handleReceivedHIDReport(HID_REPORT report)
 		FfbHandle_SetEffect((USB_FFBReport_SetEffect_Output_Data_t *) data);
 		break;
 	case 2:
-		SetEnvelope((USB_FFBReport_SetEnvelope_Output_Data_t*) data, &gEffectStates[effectId]);
-		LogTextLf("Set Envelope");
+		SetEnvelope((USB_FFBReport_SetEnvelope_Output_Data_t*) data, effectId);
 		break;
 	case 3:
-		SetCondition((USB_FFBReport_SetCondition_Output_Data_t*) data, &gEffectStates[effectId]);
+		SetCondition((USB_FFBReport_SetCondition_Output_Data_t*) data, effectId);
 		/*
 					LogText("Set Condition - offset : ");
 					LogBinary(&((USB_FFBReport_SetCondition_Output_Data_t*)data)->cpOffset,1);
@@ -163,20 +162,18 @@ bool USBGameController::handleReceivedHIDReport(HID_REPORT report)
 					*/
 		break;
 	case 4:
-		SetPeriodic((USB_FFBReport_SetPeriodic_Output_Data_t*) data, &gEffectStates[effectId]);
+		SetPeriodic((USB_FFBReport_SetPeriodic_Output_Data_t*) data, effectId);
 		//			LogTextLf("Set Periodic");
 		break;
 	case 5:
-		SetConstantForce((USB_FFBReport_SetConstantForce_Output_Data_t*) data, &gEffectStates[effectId]);
+		SetConstantForce((USB_FFBReport_SetConstantForce_Output_Data_t*) data, effectId);
 		//			LogTextLf("Set Constant Force");
 		break;
 	case 6:
-		SetRampForce((USB_FFBReport_SetRampForce_Output_Data_t*)data, &gEffectStates[effectId]);
-		LogTextLf("Set Ramp Force");
+		SetRampForce((USB_FFBReport_SetRampForce_Output_Data_t*)data, effectId);
 		break;
 	case 7:
 		FfbHandle_SetCustomForceData((USB_FFBReport_SetCustomForceData_Output_Data_t*) data);
-		LogTextLf("Set Custom Force Table");
 		break;
 	case 8:
 		FfbHandle_SetDownloadForceSample((USB_FFBReport_SetDownloadForceSample_Output_Data_t*) data);
@@ -224,9 +221,7 @@ void FfbOnCreateNewEffect (USB_FFBReport_CreateNewEffect_Feature_Data_t* inData,
 	{
 		outData->loadStatus = 1;	// 1=Success,2=Full,3=Error
 		
-		volatile cEffectState* effect = &gEffectStates[outData->effectBlockIndex];
-		
-		CreateNewEffect(inData, effect);
+		CreateNewEffect(inData, outData->effectBlockIndex);
 
 		LogText("Created effect ");
 		LogBinary(&outData->effectBlockIndex,1);
@@ -239,9 +234,7 @@ void FfbOnCreateNewEffect (USB_FFBReport_CreateNewEffect_Feature_Data_t* inData,
 
 void FfbHandle_SetEffect(USB_FFBReport_SetEffect_Output_Data_t *data)
 {
-	volatile cEffectState* effect = &gEffectStates[data->effectBlockIndex];
-	SetEffect(data,effect);
-	LogTextLf("Set Effect");
+	SetEffect(data,data->effectBlockIndex);
 }
 
 void FfbOnPIDPool(USB_FFBReport_PIDPool_Feature_Data_t *data)
@@ -256,10 +249,12 @@ void FfbOnPIDPool(USB_FFBReport_PIDPool_Feature_Data_t *data)
 
 void FfbHandle_SetCustomForceData(USB_FFBReport_SetCustomForceData_Output_Data_t *data)
 {
+	debugPrint(DMid, "SetCustomForceData");
 }
 
 void FfbHandle_SetDownloadForceSample(USB_FFBReport_SetDownloadForceSample_Output_Data_t *data)
 {
+	debugPrint(DMid, "SetDownloadForceSample");
 }
 
 void FfbHandle_EffectOperation(USB_FFBReport_EffectOperation_Output_Data_t *data)
@@ -271,20 +266,20 @@ void FfbHandle_EffectOperation(USB_FFBReport_EffectOperation_Output_Data_t *data
 
 	if (data->operation == 1)
 	{	// Start
-		LogTextLf("Start Effect");
+		debugPrint(DLow,"Start effect id %d",eid);
 		StartEffect(eid);
 	}
 	else if (data->operation == 2)
 	{	// StartSolo
 		// Stop all first
-		LogTextLf("Start Solo Effect");
+		debugPrint(DLow,"Start solo effect id %d",eid);
 		StopAllEffects();
 		// Then start the given effect
 		StartEffect(eid);
 	}
 	else if (data->operation == 3)
 	{	// Stop
-		LogTextLf("Stop Effect");
+		debugPrint(DLow,"Stop effect id %d",eid);
 		StopEffect(eid);
 	}
 }

@@ -197,4 +197,15 @@ extern Serial pc;
 #define	SEND_LED_HIGH()			SET_SEND_SIGNAL(HIGH)
 #define	SEND_LED_LOW()			SET_SEND_SIGNAL(LOW)
 
+
+/* NEW DEBUG LOGGING, MAY REPLACE ALL OLD:*/
+
+//comment out to disable, gives smaller & faster code
+#define FFB_ENABLE_DEBUG_PRINTS
+
+typedef enum _debugVerbosityLevel {DOff,DLow,DMid,DHigh,DTrace} debugVerbosityLevel;
+
+void debugPrint( debugVerbosityLevel verbositylevel, char const *format, ...);
+
+
 #endif // _DEBUG_H_
