@@ -425,6 +425,8 @@ bool testPortX11()
 }
 
 int main() {
+	DigitalOut STO(PD_7);
+	STO=0;
 	smbus h;
 	h=smOpenBus("MBEDSERIAL");
 	SMSerial.baud(460800);
@@ -465,6 +467,7 @@ int main() {
 		testResultLedLoop(4);
 
 	//init drive
+	STO=1;
 	DriveEnable=1;
 	bool done=false;
 	while(!done)
