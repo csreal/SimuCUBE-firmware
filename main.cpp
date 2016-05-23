@@ -424,14 +424,29 @@ bool testPortX11()
 	return true;//all passed
 }
 
+void printCPUID()
+{
+	unsigned int *uid;
+
+	uid=(unsigned int*)0x1FFF7A10;//stm32f4 uid address 96 bits
+	pc.printf("CPUID %ul %ul %ul\n",uid[0],uid[1],uid[2]);
+}
+
 int main() {
-	DigitalOut STO(PD_7);
+	DigitalInOut STO(PD_7);
 	STO=0;
+	STO.output();//when in input, STO off because pullup on sto line
+
 	smbus h;
 	h=smOpenBus("MBEDSERIAL");
 	SMSerial.baud(460800);
-	pc.baud(230400);
+	pc.baud(9600);
+	pc.printf("STARTED\n");
+	pc.printf("TESTFW\n");
+	pc.printf("100\n");//version
     SM_STATUS stat;
+
+    printCPUID();
 
     led1green=1;
     led3green=1;
@@ -441,33 +456,35 @@ int main() {
 	t.start();
 	EncoderInitialize();
 
+	wait(0.3);
 	//move mouse, tester need watch if cursor moves
-    mouse.move(10, 10);
+    mouse.move(8, 8);
     wait(0.2);
-    mouse.move(-10, -10);
+    mouse.move(-11, -12);
     wait(0.2);
-    mouse.move(10, 10);
+    mouse.move(13, 14);
     wait(0.2);
-    mouse.move(-10, -10);
+    mouse.move(-15, -16);
     wait(0.2);
-    mouse.move(10, 10);
-    wait(0.2);
-    for(int i=0;i<50;i++)//to top corner
-    {
-    	mouse.move(-100, -100);
-    	wait(0.01);
-    }
+    mouse.move(17, 18);
+
 
 
 	//test ports. straight wired RJ45s must be connected from upper->lower on X11 & X12
 	if(testPortX11()==false)
+	{
+		pc.printf("FAILED_X11\n");
 		testResultLedLoop(3);
+	}
 
 	if(testPortX12()==false)
+	{
+		pc.printf("FAILED_X12\n");
 		testResultLedLoop(4);
+	}
 
 	//init drive
-	STO=1;
+	STO.input();
 	DriveEnable=1;
 	bool done=false;
 	while(!done)
@@ -476,10 +493,12 @@ int main() {
         stat=smRead1Parameter(h,1,SMP_STATUS,&read);
         if(stat!=SM_OK)
         {
+        	pc.printf("FAILED_SMBUS1\n");
         	testResultLedLoop(0);
         }
         if(t.read()>15)//timeout
         {
+        	pc.printf("FAILED_SMBUS2\n");
         	testResultLedLoop(1);
         }
         if(read&STAT_SERVO_READY)
@@ -492,27 +511,59 @@ int main() {
     stat|=smRead1Parameter(h,1,SMP_CONTROL_MODE,&read);
     if(read!=SM_OK)
     {
+    	pc.printf("FAILED_SMBUS3\n");
     	testResultLedLoop(0);
     }
     if(read!=CM_POSITION)
+    {
+    	pc.printf("FAILED_SMBUS4\n");
     	testResultLedLoop(5);
+    }
 
 
 	//test driving
 	smSetParameter(h,1,SMP_ABSOLUTE_SETPOINT,0);
-	wait(2);
+	wait(0.9);
 	TIM2->CNT = 0x0000;
 	smSetParameter(h,1,SMP_ABSOLUTE_SETPOINT,-5000);
-	wait(2);
-	pc.printf("a %d\n",EncoderRead());
+	wait(0.9);
+	//pc.printf("a %d\n",EncoderRead());
 	if(EncoderRead()<4000||EncoderRead()>6000)
+	{
+    	pc.printf("FAILED_ENC1\n");
 		testResultLedLoop(2);
+	}
 	smSetParameter(h,1,SMP_ABSOLUTE_SETPOINT,5000);
-	wait(2);
+	wait(0.9);
 	if(EncoderRead()<-6000||EncoderRead()>-4000)
+	{
+    	pc.printf("FAILED_ENC2\n");
 		testResultLedLoop(2);
-	pc.printf("b %d\n",EncoderRead());
+	}
+	//pc.printf("b %d\n",EncoderRead());
 
+
+	//test STO
+	STO.output();
+	STO=0;
+	wait(0.2);
+    stat=smRead1Parameter(h,1,SMP_STATUS,&read);
+    if(stat!=SM_OK)
+    {
+    	pc.printf("FAILED_SMBUS5\n");
+    	testResultLedLoop(0);
+    }
+    if(!(read&STAT_STO_ACTIVE))
+    {
+    	pc.printf("FAILED_STO\n");
+    	testResultLedLoop(1);
+    }
+
+    //prepare for usb2 test on raspi
+    stat=smRead1Parameter(h,1,SMP_NULL,&read);
+
+
+	pc.printf("ALL_PASSED\n");
 	//all pass
 	testResultLedLoop(-1);
 
