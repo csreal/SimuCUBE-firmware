@@ -10,7 +10,7 @@
 <booleanAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.doGdbServerLocalOnly" value="false"/>
 <booleanAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.doGdbServerSilent" value="false"/>
 <booleanAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.doGdbServerVerifyDownload" value="true"/>
-<booleanAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.doSecondReset" value="true"/>
+<booleanAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.doSecondReset" value="false"/>
 <booleanAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.doStartGdbServer" value="true"/>
 <booleanAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.enableFlashBreakpoints" value="false"/>
 <booleanAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.enableSemihosting" value="false"/>
@@ -27,7 +27,7 @@
 <stringAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.gdbServerDeviceEndianness" value="little"/>
 <stringAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.gdbServerDeviceName" value="STM32F407VE"/>
 <stringAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.gdbServerDeviceSpeed" value="auto"/>
-<stringAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.gdbServerExecutable" value="C:\Program Files (x86)\SEGGER\JLink_V510u\JLinkGDBServerCL.exe"/>
+<stringAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.gdbServerExecutable" value="E:\Program Files (x86)\SEGGER\JLink_V512e\JLinkGDBServerCL.exe"/>
 <intAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.gdbServerGdbPortNumber" value="2331"/>
 <stringAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.gdbServerLog" value=""/>
 <stringAttribute key="ilg.gnuarmeclipse.debug.gdbjtag.jlink.gdbServerOther" value="-s"/>
@@ -82,5 +82,5 @@
 </listAttribute>
 <stringAttribute key="org.eclipse.dsf.launch.MEMORY_BLOCKS" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#13;&#10;&lt;memoryBlockExpressionList context=&quot;Context string&quot;/&gt;&#13;&#10;"/>
 <stringAttribute key="process_factory_id" value="org.eclipse.cdt.dsf.gdb.GdbProcessFactory"/>
-<stringAttribute key="saved_expressions&lt;seperator&gt;Unknown" value="0x20009ff0,0x20005000,0x08006000,0x08000000,0x08006188,0x08005800"/>
+<stringAttribute key="saved_expressions&lt;seperator&gt;Unknown" value="0x20009ff0,0x20005000,0x08006000,0x08000000,0x08006188,0x08005800,0x1fff0000,0x1fff0004,0x1fff0002,0x8000000"/>
 </launchConfiguration>

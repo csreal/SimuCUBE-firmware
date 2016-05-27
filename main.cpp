@@ -22,7 +22,7 @@
  */
 
 //when uncommented, compile placeholder FW that will be shipped with simucubes, otherwise test fw that is used in production test
-//#define COMPILE_FINAL_PLACEHOLDER_FW
+#define COMPILE_FINAL_PLACEHOLDER_FW
 
 #ifndef COMPILE_FINAL_PLACEHOLDER_FW
 #include "mbed.h"
@@ -597,4 +597,35 @@ int main()
 	}
 }
 
+/* JUMP TO DFU MODE, enter_bootloader MUST BE CALLED FROM Reset_Handler very early*/
+
+#define BOOTLOADER_START 0x1fff0000
+
+static uint32_t *bootloader_msp = (uint32_t *)BOOTLOADER_START;
+static void *(**bootloader)() = (void*(**)())(BOOTLOADER_START + 4);
+
+extern "C" {
+
+typedef  void (*pFunction)(void);
+void enter_bootloader()
+{
+	static pFunction Jump_To_Application; //must be static because set_MSP will mess stack and local vars
+	static uint32_t JumpAddress;
+
+    RCC->APB2ENR = RCC_APB2ENR_SYSCFGEN;
+    SYSCFG->MEMRMP |= SYSCFG_MEMRMP_MEM_MODE_0;
+
+	JumpAddress = *(__IO uint32_t*) (BOOTLOADER_START + 4);
+	Jump_To_Application = (pFunction) JumpAddress;
+	__set_MSP(*bootloader_msp);
+
+	Jump_To_Application();
+
+    /* Should never happen */
+    while (1) {}
+}
+}
+
+
 #endif
+
