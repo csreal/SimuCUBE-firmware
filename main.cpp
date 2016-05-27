@@ -21,6 +21,10 @@
  *
  */
 
+//when uncommented, compile placeholder FW that will be shipped with simucubes, otherwise test fw that is used in production test
+//#define COMPILE_FINAL_PLACEHOLDER_FW
+
+#ifndef COMPILE_FINAL_PLACEHOLDER_FW
 #include "mbed.h"
 #include "USBHID.h"
  
@@ -570,3 +574,27 @@ int main() {
     while(1) {}
 }
 
+#else
+#include "mbed.h"
+
+DigitalOut led1(PD_13);
+DigitalOut led2(PD_14);
+DigitalOut led3(PD_15);
+
+int main()
+{
+	while(1)
+	{
+		led1=1;
+		wait(0.5);
+		led1=0;
+		led2=1;
+		wait(0.5);
+		led2=0;
+		led3=1;
+		wait(0.5);
+		led3=0;
+	}
+}
+
+#endif
