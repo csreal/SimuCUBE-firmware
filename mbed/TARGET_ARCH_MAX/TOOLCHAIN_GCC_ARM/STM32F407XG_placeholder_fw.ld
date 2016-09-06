@@ -33,7 +33,7 @@ MEMORY
  *   __stack
  *   _estack
  */
-ENTRY(Reset_Handler)
+ENTRY(Custom_Reset_Handler)
 
 SECTIONS
 {

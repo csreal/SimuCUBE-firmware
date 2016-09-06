@@ -22,15 +22,19 @@
  */
 
 //when uncommented, compile placeholder FW that will be shipped with simucubes, otherwise test fw that is used in production test
-#define COMPILE_FINAL_PLACEHOLDER_FW
+//#define COMPILE_FINAL_PLACEHOLDER_FW
 
+//huom laita makefileen myos PLACEHOLDER_FW=1 ja recompile
 #ifndef COMPILE_FINAL_PLACEHOLDER_FW
+
 #include "mbed.h"
 #include "USBHID.h"
  
 DigitalOut led2red(PD_15);
 DigitalOut led1green(PD_14);
 DigitalOut led3green(PD_13);
+DigitalOut HSIN1(PE_11);
+DigitalOut HSIN2(PE_9);
 
 
 #include "USBMouse.h"
@@ -436,18 +440,67 @@ void printCPUID()
 	pc.printf("CPUID %ul %ul %ul\n",uid[0],uid[1],uid[2]);
 }
 
+smbus h;
+
+void testHSIN()
+{
+	HSIN1=HSIN2=0;
+	smint32 read;
+	SM_STATUS stat=0;
+	int errcode=0;
+
+	wait(0.05);
+	stat|=smRead1Parameter(h,1,SMP_DIGITAL_IN_VALUES_1,&read);
+	if( read & (1<<5) )//hsin1
+		errcode+=1;
+	if( read & (1<<6) )//hsin2
+		errcode+=10;
+
+	HSIN1=1;
+	wait(0.05);
+	stat|=smRead1Parameter(h,1,SMP_DIGITAL_IN_VALUES_1,&read);
+	if( !(read & (1<<5)) )//hsin1
+		errcode+=100;
+	if( read & (1<<6) )//hsin2
+		errcode+=1000;
+
+	HSIN2=1;
+	wait(0.05);
+	stat|=smRead1Parameter(h,1,SMP_DIGITAL_IN_VALUES_1,&read);
+	if( !(read & (1<<5)) )//hsin1
+		errcode+=10000;
+	if( !(read & (1<<6)) )//hsin2
+		errcode+=100000;
+
+	HSIN1=0;
+	wait(0.05);
+	stat|=smRead1Parameter(h,1,SMP_DIGITAL_IN_VALUES_1,&read);
+	if( (read & (1<<5)) )//hsin1
+		errcode+=1000000;
+	if( !(read & (1<<6)) )//hsin2
+		errcode+=10000000;
+
+	if(stat!=SM_OK)//read failed
+		errcode+=100000000;
+
+	if(errcode)
+	{
+		pc.printf("FAILED_HSINTEST error code %d, check PCBA defects\n",errcode);
+		testResultLedLoop(4);
+	}
+}
+
 int main() {
 	DigitalInOut STO(PD_7);
 	STO=0;
 	STO.output();//when in input, STO off because pullup on sto line
 
-	smbus h;
 	h=smOpenBus("MBEDSERIAL");
 	SMSerial.baud(460800);
 	pc.baud(9600);
 	pc.printf("STARTED\n");
 	pc.printf("TESTFW\n");
-	pc.printf("100\n");//version
+	pc.printf("101\n");//version
     SM_STATUS stat;
 
     printCPUID();
@@ -508,6 +561,9 @@ int main() {
         if(read&STAT_SERVO_READY)
         	done=true;
 	}
+
+    testHSIN();
+
 	TIM2->CNT = 0x0000;
 
 	//verify that its pos mode
@@ -563,6 +619,7 @@ int main() {
     	testResultLedLoop(1);
     }
 
+
     //prepare for usb2 test on raspi
     stat=smRead1Parameter(h,1,SMP_NULL,&read);
 
@@ -573,6 +630,7 @@ int main() {
 
     while(1) {}
 }
+
 
 #else
 #include "mbed.h"
