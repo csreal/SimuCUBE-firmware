@@ -490,6 +490,30 @@ void testHSIN()
 	}
 }
 
+void testRegen()
+{
+	HSIN1=HSIN2=0;
+	smint32 read;
+	SM_STATUS stat=0;
+	int errcode=0;
+
+	stat|=smSetParameter(h,1,SMP_SYSTEM_CONTROL,10000);
+	wait(0.1);
+	stat|=smRead1Parameter(h,1,SMP_DEBUGPARAM6,&read);
+
+	if(stat!=SM_OK)
+	{
+		pc.printf("FAILED_SMBUS9\n");
+		testResultLedLoop(0);
+	}
+
+	if( read != 2000 )//2000 is valid answer, above that is error
+	{
+		pc.printf("FAILED_REGEN_RES_TEST error code %d\n",read);
+		testResultLedLoop(4);
+	}
+}
+
 int main() {
 	DigitalInOut STO(PD_7);
 	STO=0;
@@ -540,6 +564,22 @@ int main() {
 		testResultLedLoop(4);
 	}
 
+	//check ioni fw version, requires special system fun 10000. in fw ver 1199
+	{
+		smint32 read;
+		stat=smRead1Parameter(h,1,SMP_GC_FIRMWARE_VERSION,&read);
+		if(stat!=SM_OK)
+		{
+			pc.printf("FAILED_SMBUS0\n");
+			testResultLedLoop(0);
+		}
+		if(read!=1199)
+		{
+			pc.printf("FAILED_WRONG_IONI_FW_VERSION\n");
+			testResultLedLoop(1);
+		}
+	}
+
 	//init drive
 	STO.input();
 	DriveEnable=1;
@@ -563,6 +603,9 @@ int main() {
 	}
 
     testHSIN();
+    testRegen();
+    //reset UV fault that may come from regen test. voltage drops to 40V at 500us regen pulse. fault limit now set to 34v so should not need it
+    //smSetParameter(h,1,SMP_FAULTS,0);
 
 	TIM2->CNT = 0x0000;
 
