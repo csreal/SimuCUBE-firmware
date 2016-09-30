@@ -20,6 +20,32 @@ cFFBDevice gFFBDevice;
 extern "C" {
 #endif
 
+
+
+
+// some basic parameters, to be moved into a data structure for saving/loading to/from flash
+int steeringDegrees		= 270;
+smint32 steeringEncoderOffset = 0;
+
+
+s32 encoderOffsetValue 	= 0;
+// todo: pedal and buttons mapping, like this:
+// map pins to to table when configured, 0 if not configured
+int pedals [3] = {0, 0, 0};
+// more pedal values into similar table
+// easier to save to flash than struct,similar to use.
+
+int buttons[32] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+
+
+
+
+
+
+
+
+
 //Init encoder input
 //credit to David Lowe from https://developer.mbed.org/forum/platform-34-ST-Nucleo-F401RE-community/topic/4963/?page=1#comment-26870
 void EncoderInitialize()
@@ -139,7 +165,30 @@ AnalogIn ADCUpperPin3(PC_5);
 AnalogIn ADCUpperPin2(PB_0);
 AnalogIn ADCUpperPin1(PB_1);
 
+
+
 Serial pc(PA_9, PA_10); // tx, rx
+//serial debug printing
+
+//void PCPrintStr(string text) {
+//	pc.printf(text);
+//}
+
+//void PCPrintInt8(int8_t number) {
+//	pc.printf(number);
+//}
+//
+//void PCPrintInt16(int16_t number) {
+//	pc.printf(number);
+//}
+//void PCPrintFloat(float number) {
+//	pc.printf(number);
+//}
+//void PCPrintRN() {
+//	pc.printf("\r\n");
+//}
+
+
 #include "simplemotion.h"
 
 void SystemClock_Config(void)
@@ -251,8 +300,8 @@ bool InitializeDrive()
 	if(getCumulativeStatus(gFFBDevice.mSMBusHandle)!=SM_OK)
 		broadcastSystemStatus(DriveConnectionError,true);
 
-	if(driveFWversion<1093)//V1092 would be enough, but it has bug in SMP_FAULT_BEHAVIOR which is fixed in the next version
-		broadcastSystemStatus(DriveFWUnsupported, true);
+/*	if(driveFWversion<1093)//V1092 would be enough, but it has bug in SMP_FAULT_BEHAVIOR which is fixed in the next version
+		broadcastSystemStatus(DriveFWUnsupported, true);*/
 
 	//disable enable drive watchdog: if communication is lost for over 1sec or has error, drive will go fault state
 	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1|(100<<8));
@@ -280,12 +329,16 @@ bool InitializeDrive()
 	p1=SetTorque(0);//call this twice to have 16 bit differential encoder unwrapper initialized
 	p2=SetTorque(0);
 	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ACTUAL_POSITION_FB, &positionFB);//read 32 bit position
+
+	// TODO at this time, the steering wheel should be driven too center
+	// defined by encoderOffsetValue variable
+	// and only after that resetPositionCountAt should be called.
 	resetPositionCountAt(positionFB);
 
 	//enable drive watchdog: if communication is lost for over 0.3sec or has error, drive will go fault state
 	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1 | (30<<8));
 
-	broadcastSystemStatus(Operational);
+	broadcastSystemStatus(Operational, false);
 
 
 	return true;
@@ -293,34 +346,47 @@ bool InitializeDrive()
 
 int main()
 {
+
 	HAL_Init();
 	SystemClock_Config();
 
-	ledBlinker.attach(&controlLeds,0.5);
-
-	InitializeDrive();
-
-	int32_t i = 0;
-
     pc.baud(230400);
     pc.printf("Hello World!\n\r");
+	ledBlinker.attach(&controlLeds,0.5);
 
+
+	InitializeDrive();
+	broadcastSystemStatus(Operational, false);
+	int32_t i = 0;
+
+	pc.printf("motor init done!\n\r");
     EncoderInitialize();
 	InitializeTorqueCommand();
     while (1) 
     {
-	    //s32 x = EncoderRead();//direct read of quadrature encoder
+	    s32 x = EncoderRead();//direct read of quadrature encoder
     	s32 encoderCounter;
 	    gFFBDevice.CalcTorqueCommand(&encoderCounter);//reads encoder counter too
-	    
+
 	    i += 32;
-		uint16_t throttle = i & 0xffff;
+/*		uint16_t throttle = i & 0xffff;
 	    uint16_t rudder = (i + 10000) & 0xffff;
 	    uint16_t clutch = (i + 20000) & 0xffff;
 	    uint16_t brake = (i + 30000) & 0xffff;
 	    uint32_t button = i;
 	    int8_t hat    = (i >> 8) & 0x07;
-	    uint16_t y = (i + 40000) & 0xffff;
+	    uint16_t y = (i + 40000) & 0xffff;*/
+
+	    // unsigned 16-bit for these, as joystick API needs it.
+	    // calculate internally with more accuracy when reading/scaling!
+	    uint16_t throttle = 0;
+	    uint16_t rudder = 0;
+	    uint16_t clutch = 0;
+	    uint16_t brake = 0;
+	    int8_t hat = 0;
+	    uint16_t y = 0;
+	    uint32_t button = 0;
+
 	    encoderCounter = constrain(encoderCounter + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
         joystick.update(brake, clutch,throttle,rudder, encoderCounter, y, button, hat);
 

@@ -147,7 +147,9 @@ bool USBGameController::handleReceivedHIDReport(HID_REPORT report)
 	switch (data[0])	// reportID
 	{
 	case 1:
+		pc.printf("got effect command\r\n");
 		FfbHandle_SetEffect((USB_FFBReport_SetEffect_Output_Data_t *) data);
+
 		break;
 	case 2:
 		SetEnvelope((USB_FFBReport_SetEnvelope_Output_Data_t*) data, effectId);

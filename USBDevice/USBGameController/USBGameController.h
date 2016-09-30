@@ -215,6 +215,8 @@ class USBGameController: public USBHID {
                  connect();
              };
 
+         virtual ~USBGameController(){}
+
          /**
          * Write a state of the game controller
          *

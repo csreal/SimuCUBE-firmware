@@ -100,7 +100,10 @@ void SetConstantForce (USB_FFBReport_SetConstantForce_Output_Data_t* data, int e
 
 	effect->magnitude = data->magnitude;
 
-	debugPrint(DMid,"SetConstantForce eid=%d %d",effectId,effect->magnitude);
+	pc.printf("SetConstantForce eid=%d", effectId);
+	pc.printf(" magnitude: %ld", effect->magnitude);
+	pc.printf("\r\n");
+	//debugPrint(DMid,"SetConstantForce eid=%d %d",effectId,effect->magnitude);
 }
 
 void SetRampForce (USB_FFBReport_SetRampForce_Output_Data_t* data, int effectId )
@@ -130,54 +133,67 @@ void SetEffect (USB_FFBReport_SetEffect_Output_Data_t *data, int effectId )
 	switch (data->effectType)
 	{
 		case USB_EFFECT_SQUARE:
+			pc.printf("square effect\r\n");
 			type="SQUARE";
 		break;
 		case USB_EFFECT_SINE:
+			pc.printf("sine effect\r\n");
 			type="SINE";
 		break;
 		case USB_EFFECT_TRIANGLE:
+			pc.printf("triangle effect\r\n");
 			type="TRIANGLE";
 		break;
 
 		case USB_EFFECT_SAWTOOTHDOWN:
+			pc.printf("sawtooth down effect\r\n");
 			type="SAWTOOTH";
 		break;
 
 		case USB_EFFECT_SAWTOOTHUP:
+			pc.printf("sawtooth up effect\r\n");
 			type="SAWTOOTHUP";
 		break;
 //			is_periodic = true;
 		case USB_EFFECT_CONSTANT:
+			pc.printf("constant effect\r\n");
 			type="CONSTANT";
 		break;
 
 		case USB_EFFECT_RAMP:
+			pc.printf("ramp effect\r\n");
 			type="RAMP";
 		break;
 	
 		case USB_EFFECT_SPRING:
+			pc.printf("spring effect\r\n");
 			type="SRPING";
 		break;
 
 		case USB_EFFECT_DAMPER:
+			pc.printf("damper effect\r\n");
 			type="DAMPER";
 		break;
 		case USB_EFFECT_INERTIA:
+			pc.printf("inertia effect\r\n");
 			type="INERTIA";
 		break;
 		
 		case USB_EFFECT_FRICTION:
+			pc.printf("friction effect\r\n");
 			type="FRICTION";
 		break;
 		
 		case USB_EFFECT_CUSTOM:	
 			effect->period = data->samplePeriod;	// 0..32767 ms
+			pc.printf("custom effect\r\n");
 			type="CUSTOM";
 
 		break;
 		
 		default:
 			type="UNKNOWN EFFECT";
+			pc.printf("unknown effect\r\n");
 		break;
 	}
 	debugPrint(DMid,"SetEffect eid=%d %s gain %d duration %d",effectId, type,data->gain,data->duration);
