@@ -23,19 +23,7 @@ extern "C" {
 
 
 
-// some basic parameters, to be moved into a data structure for saving/loading to/from flash
-int steeringDegrees		= 270;
-smint32 steeringEncoderOffset = 0;
-
-
-s32 encoderOffsetValue 	= 0;
-// todo: pedal and buttons mapping, like this:
-// map pins to to table when configured, 0 if not configured
-int pedals [3] = {0, 0, 0};
-// more pedal values into similar table
-// easier to save to flash than struct,similar to use.
-
-int buttons[32] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+#include "Config.h"
 
 
 
@@ -386,6 +374,10 @@ int main()
 	    int8_t hat = 0;
 	    uint16_t y = 0;
 	    uint32_t button = 0;
+
+	    // test to see if buttons array can be accessed (it should)
+	    // buttons[i % 31]=1;
+	    // it worked.
 
 	    encoderCounter = constrain(encoderCounter + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
         joystick.update(brake, clutch,throttle,rudder, encoderCounter, y, button, hat);
