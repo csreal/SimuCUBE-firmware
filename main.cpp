@@ -10,6 +10,81 @@ DigitalOut led6(PD_13);
 #include "stm32f4xx_hal_tim.h"
 #include "stm32f4xx.h"
 
+#include "simucube_io_defs.h"
+
+
+
+
+//#include "config.h"
+#define GAS 0
+#define BRAKE 1
+#define CLUTCH 2
+
+
+// pedal and buttons mapping
+// map pin numbers to to table when configured, 0 if not configured
+PinName analogAxisPinCfg [3];
+bool analogAxisInvert[3];
+uint16_t analogAxisMinValue[3];
+uint16_t analogAxisMaxValue[3];
+
+// filtering for these analog inputs
+int analogAxisFiltering[3];
+
+// scales raw input value ranging minvalue-maxvalue to 0-65535
+uint16_t ScaleAnalogAxis(uint16_t raw, bool invert, uint16_t minvalue, uint16_t maxvalue) {
+	uint16_t output = (uint16_t)(65535.0*((float)raw-(float)minvalue)/(float)(maxvalue-minvalue));
+	if(invert) {
+		return 65535-output;
+	}
+	else {
+		return output;
+	}
+}
+
+
+int buttonsCfg[32];
+
+void readConfigFromFlash() {
+	// does not read from flash now; that requires a quick test
+	analogAxisPinCfg[GAS] = X11upper_2;
+	analogAxisPinCfg[BRAKE] = X11upper_1;
+    analogAxisPinCfg[CLUTCH] = X11upper_5;
+	analogAxisInvert[GAS] = 0;
+	analogAxisInvert[BRAKE] = 0;
+	analogAxisInvert[CLUTCH] = 0;
+	analogAxisFiltering[GAS] = 0;
+	analogAxisFiltering[BRAKE] = 0;
+	analogAxisFiltering[CLUTCH] = 0;
+	analogAxisMinValue[GAS] = 0;
+	analogAxisMinValue[BRAKE] = 0;
+	analogAxisMinValue[CLUTCH] = 0;
+	analogAxisMaxValue[GAS] = 65535;
+	analogAxisMaxValue[BRAKE] = 65535;
+	analogAxisMaxValue[CLUTCH] = 65535;
+
+	for(int i = 0;i<32;i++) {
+		buttonsCfg[i] = 0; // no buttons connected for now
+	}
+
+}
+
+void saveConfigToFlash() {
+	// paste the code here
+}
+
+//#include "analogAxis.h"
+/*
+void(initAnalogAxis) {
+
+}
+void (updateAnalogAxis) {
+	// GAS
+	if {analogAxisPinCfg[GAS] }
+}
+*/
+
+
 Serial SMSerial(PB_10, PB_11); // tx, rx
 DigitalOut SMSerialTXEN(PD_8);
 bool SMSerialMasterIsMe=true;
@@ -19,13 +94,6 @@ cFFBDevice gFFBDevice;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-
-
-#include "Config.h"
-
-
 
 
 
@@ -156,25 +224,7 @@ AnalogIn ADCUpperPin1(PB_1);
 
 
 Serial pc(PA_9, PA_10); // tx, rx
-//serial debug printing
 
-//void PCPrintStr(string text) {
-//	pc.printf(text);
-//}
-
-//void PCPrintInt8(int8_t number) {
-//	pc.printf(number);
-//}
-//
-//void PCPrintInt16(int16_t number) {
-//	pc.printf(number);
-//}
-//void PCPrintFloat(float number) {
-//	pc.printf(number);
-//}
-//void PCPrintRN() {
-//	pc.printf("\r\n");
-//}
 
 
 #include "simplemotion.h"
@@ -345,42 +395,64 @@ int main()
 
 	InitializeDrive();
 	broadcastSystemStatus(Operational, false);
-	int32_t i = 0;
 
 	pc.printf("motor init done!\n\r");
     EncoderInitialize();
 	InitializeTorqueCommand();
+
+    // unsigned 16-bit for these, as joystick API needs it.
+    // calculated internally with more accuracy when reading/scaling.
+    uint16_t throttle = 0;
+    uint16_t rudder = 0;
+    uint16_t clutch = 0;
+    uint16_t brake = 0;
+    int8_t hat = 0;
+    uint16_t y = 0;
+    uint32_t button = 0;
+
+    // read device config from flash (currently applies a fixed config)
+    readConfigFromFlash();
+
+    AnalogIn* throttlepedal = 0;
+    AnalogIn* brakepedal = 0;
+    AnalogIn* clutchpedal = 0;
+
+
+    // init analog axis
+    if(analogAxisPinCfg[GAS]) {
+    	throttlepedal = new AnalogIn(analogAxisPinCfg[GAS]);
+    }
+    if(analogAxisPinCfg[BRAKE]) {
+    	brakepedal = new AnalogIn(analogAxisPinCfg[BRAKE]);
+    }
+    if(analogAxisPinCfg[CLUTCH]) {
+    	clutchpedal = new AnalogIn(analogAxisPinCfg[CLUTCH]);
+    }
+
     while (1) 
     {
-	    s32 x = EncoderRead();//direct read of quadrature encoder
+	    //s32 x = EncoderRead();//direct read of quadrature encoder
     	s32 encoderCounter;
 	    gFFBDevice.CalcTorqueCommand(&encoderCounter);//reads encoder counter too
 
-	    i += 32;
-/*		uint16_t throttle = i & 0xffff;
-	    uint16_t rudder = (i + 10000) & 0xffff;
-	    uint16_t clutch = (i + 20000) & 0xffff;
-	    uint16_t brake = (i + 30000) & 0xffff;
-	    uint32_t button = i;
-	    int8_t hat    = (i >> 8) & 0x07;
-	    uint16_t y = (i + 40000) & 0xffff;*/
-
-	    // unsigned 16-bit for these, as joystick API needs it.
-	    // calculate internally with more accuracy when reading/scaling!
-	    uint16_t throttle = 0;
-	    uint16_t rudder = 0;
-	    uint16_t clutch = 0;
-	    uint16_t brake = 0;
-	    int8_t hat = 0;
-	    uint16_t y = 0;
-	    uint32_t button = 0;
-
-	    // test to see if buttons array can be accessed (it should)
-	    // buttons[i % 31]=1;
-	    // it worked.
-
 	    encoderCounter = constrain(encoderCounter + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
-        joystick.update(brake, clutch,throttle,rudder, encoderCounter, y, button, hat);
+
+	    //update analog axis and send values
+	    pc.printf("pedal values (raw throttle brake clutch scaled throttle brake clutch): ");
+	    pc.printf("%d, %d, %d ", throttle, brake, clutch);
+	    //pc.printf("\r\n");
+	    throttle=throttlepedal->read_u16();
+	    brake=brakepedal->read_u16();
+	    clutch=clutchpedal->read_u16();
+
+	    if(throttlepedal) throttle = ScaleAnalogAxis(throttle, analogAxisInvert[GAS], analogAxisMinValue[GAS], analogAxisMaxValue[GAS]);
+	    if(brakepedal) brake = ScaleAnalogAxis(brake, analogAxisInvert[BRAKE], analogAxisMinValue[BRAKE], analogAxisMaxValue[BRAKE]);
+	    if(clutchpedal) clutch = ScaleAnalogAxis(clutch, analogAxisInvert[CLUTCH], analogAxisMinValue[CLUTCH], analogAxisMaxValue[CLUTCH]);
+
+	    pc.printf("%d, %d, %d \r\n", throttle, brake, clutch);
+
+
+	    joystick.update(brake, clutch, throttle, rudder, encoderCounter, y, button, hat);
 
         if(joystick.getPendingReceivedReportCount())
         {
