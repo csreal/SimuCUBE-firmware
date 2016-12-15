@@ -328,9 +328,11 @@ bool InitializeDrive()
 	broadcastSystemStatus(DriveInit);
 
 	//read some ioni drive parameters
-	smint32 driveStatus, initialPosition, homingConfigurationBits, driveFWversion;
+	smint32 driveStatus, initialPosition, homingConfigurationBits, driveFWversion, encoderResolution;
 	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
 	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &driveFWversion);
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &encoderResolution);//read encoder resolution from ioni. TODO store this value somewhere for wheel angle scaling use
+	encoderResolution*=4;//PPR to CPR
 
 	led4=led5=led6=0;
 
