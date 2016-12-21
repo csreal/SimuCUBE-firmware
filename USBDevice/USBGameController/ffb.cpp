@@ -198,10 +198,10 @@ bool USBGameController::handleReceivedHIDReport(HID_REPORT report)
 		FfbHandle_SetCustomForce((USB_FFBReport_SetCustomForce_Output_Data_t*) data);
 		break;
 	case 129:
-		gFFBDevice.mConfig.CopyProfileFrom(&data[1]);
+		gFFBDevice.mConfig.setProfile(&data[1]);
 		break;
 	case 130:
-		gFFBDevice.mConfig.CopyHardwareFrom(&data[1]);
+		gFFBDevice.mConfig.setHardware(&data[1]);
 		break;
 	default:
 		break;

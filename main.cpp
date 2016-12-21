@@ -1,6 +1,7 @@
 #include "mbed.h"
 #include "USBHID.h"
-#include "cFFBDevice.h"
+#include "simucube_io_defs.h"
+
 
 DigitalOut led4(PD_15);
 DigitalOut led5(PD_14);
@@ -10,43 +11,28 @@ DigitalOut led6(PD_13);
 #include "stm32f4xx_hal_tim.h"
 #include "stm32f4xx.h"
 
-#include "simucube_io_defs.h"
+//#include "simucube_io_defs.h"
+#include "cFFBDevice.h"
 
-
-
-
-//#include "config.h"
-#define GAS 0
-#define BRAKE 1
-#define CLUTCH 2
-
+bool debugMode=true;
 
 // pedal and buttons mapping
 // map pin numbers to to table when configured, 0 if not configured
-PinName analogAxisPinCfg [3];
-bool analogAxisInvert[3];
-uint16_t analogAxisMinValue[3];
-uint16_t analogAxisMaxValue[3];
+//PinName analogAxisPinCfg [3];
+//bool analogAxisInvert[3];
+//uint16_t analogAxisMinValue[3];
+//uint16_t analogAxisMaxValue[3];
 
 // filtering for these analog inputs
-int analogAxisFiltering[3];
-
-// scales raw input value ranging minvalue-maxvalue to 0-65535
-uint16_t ScaleAnalogAxis(uint16_t raw, bool invert, uint16_t minvalue, uint16_t maxvalue) {
-	uint16_t output = (uint16_t)(65535.0*((float)raw-(float)minvalue)/(float)(maxvalue-minvalue));
-	if(invert) {
-		return 65535-output;
-	}
-	else {
-		return output;
-	}
-}
+//int analogAxisFiltering[3];
 
 
-int buttonsCfg[32];
 
-void readConfigFromFlash() {
+
+/*void readConfigFromFlash() {
 	// does not read from flash now; that requires a quick test
+
+	// NC = not connected
 	analogAxisPinCfg[GAS] = X11upper_2;
 	analogAxisPinCfg[BRAKE] = X11upper_1;
     analogAxisPinCfg[CLUTCH] = X11upper_5;
@@ -64,26 +50,19 @@ void readConfigFromFlash() {
 	analogAxisMaxValue[CLUTCH] = 65535;
 
 	for(int i = 0;i<32;i++) {
-		buttonsCfg[i] = 0; // no buttons connected for now
+		buttonsPinCfg[i] = NC; // no buttons connected for now
 	}
 
-}
+}*/
 
+void readConfigFromFlash() {
+
+}
 void saveConfigToFlash() {
-	// paste the code here
-}
-
-//#include "analogAxis.h"
-/*
-void(initAnalogAxis) {
 
 }
-void (updateAnalogAxis) {
-	// GAS
-	if {analogAxisPinCfg[GAS] }
-}
-*/
 
+Timer testtimer;
 
 Serial SMSerial(PB_10, PB_11); // tx, rx
 DigitalOut SMSerialTXEN(PD_8);
@@ -156,6 +135,7 @@ int SMPortWrite(const char *data, int len)
 	return len;
 }
 
+extern smuint16 readTimeoutMs;
 int SMPortReadByte( char *byte )
 {
 	Timer timeout;
@@ -319,11 +299,34 @@ void controlLeds()//timer, called at every 0.5secs
 	}
 }
 
+// search index pulse. Encoder is at 0 on startup.
+bool WaitForIndexPulse( int &indexPos )
+{
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_SYSTEM_CONTROL, 2048);
+
+	bool found=false;
+	do
+	{
+		smint32 enc, status;
+		smRead2Parameters(gFFBDevice.mSMBusHandle, 1, SMP_DEBUGPARAM1, &enc, SMP_DEBUGPARAM2, &status);
+		if(status==200)
+		{
+			found=true;
+			indexPos=enc;
+			return true;
+		}
+	} while(found==false);
+
+	return false;
+}
+
 
 bool InitializeDrive()
 {
 	gFFBDevice.mSMBusHandle = smOpenBus("MBEDSERIAL");
 	SMSerial.baud(460800);
+
+	smSetTimeout(200);
 
 	broadcastSystemStatus(DriveInit);
 
@@ -340,11 +343,14 @@ bool InitializeDrive()
 	if(getCumulativeStatus(gFFBDevice.mSMBusHandle)!=SM_OK)
 		broadcastSystemStatus(DriveConnectionError,true);
 
-/*	if(driveFWversion<1093)//V1092 would be enough, but it has bug in SMP_FAULT_BEHAVIOR which is fixed in the next version
-		broadcastSystemStatus(DriveFWUnsupported, true);*/
+	if(driveFWversion<1100)//V1092 would be enough, but it has bug in SMP_FAULT_BEHAVIOR which is fixed in the next version
+		broadcastSystemStatus(DriveFWUnsupported, true);
+
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULTS,0);//reset prev communication fault & others
 
 	//disable enable drive watchdog: if communication is lost for over 1sec or has error, drive will go fault state
-	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1|(100<<8));
+	if(debugMode)
+		smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1|(100<<8));
 
 	//if drive is in fault state, wait that user resets the faults with STO input
 	while(driveStatus&STAT_FAULTSTOP )
@@ -363,6 +369,16 @@ bool InitializeDrive()
 			wait(0.5);
 	}
 
+
+	// this is the code for centering after phasing.
+	// for now, start the system when wheel is at center!
+	/*
+	int indexPos=0;
+	if(!WaitForIndexPulse(indexPos)) {
+		broadcastSystemStatus(IndexPointNotFound, false);
+	}
+	*/
+
 	//read position counter
 	volatile int p1,p2;
 	smint32 positionFB=0;
@@ -378,6 +394,12 @@ bool InitializeDrive()
 	//enable drive watchdog: if communication is lost for over 0.3sec or has error, drive will go fault state
 	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1 | (30<<8));
 
+	//smSetTimeout(50);
+	//smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_BUS_SPEED,1000000);
+	//smSetTimeout(200);
+	//SMSerial.baud(1000000);
+
+
 	broadcastSystemStatus(Operational, false);
 
 
@@ -391,7 +413,7 @@ int main()
 	SystemClock_Config();
 
     pc.baud(230400);
-    pc.printf("Hello World!\n\r");
+    if(debugMode) pc.printf("Hello World!\n\r");
 	ledBlinker.attach(&controlLeds,0.5);
 
 
@@ -402,6 +424,7 @@ int main()
     EncoderInitialize();
 	InitializeTorqueCommand();
 
+
     // unsigned 16-bit for these, as joystick API needs it.
     // calculated internally with more accuracy when reading/scaling.
     uint16_t throttle = 0;
@@ -410,26 +433,10 @@ int main()
     uint16_t brake = 0;
     int8_t hat = 0;
     uint16_t y = 0;
-    uint32_t button = 0;
 
-    // read device config from flash (currently applies a fixed config)
+    // read device config from flash (currently does nothing)
+    // a fixed config is applied in cFFBDevice init
     readConfigFromFlash();
-
-    AnalogIn* throttlepedal = 0;
-    AnalogIn* brakepedal = 0;
-    AnalogIn* clutchpedal = 0;
-
-
-    // init analog axis
-    if(analogAxisPinCfg[GAS]) {
-    	throttlepedal = new AnalogIn(analogAxisPinCfg[GAS]);
-    }
-    if(analogAxisPinCfg[BRAKE]) {
-    	brakepedal = new AnalogIn(analogAxisPinCfg[BRAKE]);
-    }
-    if(analogAxisPinCfg[CLUTCH]) {
-    	clutchpedal = new AnalogIn(analogAxisPinCfg[CLUTCH]);
-    }
 
     while (1) 
     {
@@ -438,23 +445,16 @@ int main()
 	    gFFBDevice.CalcTorqueCommand(&encoderCounter);//reads encoder counter too
 
 	    encoderCounter = constrain(encoderCounter + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
+	    pc.printf("tick\r\n");
 
-	    //update analog axis and send values
-	    pc.printf("pedal values (raw throttle brake clutch scaled throttle brake clutch): ");
-	    pc.printf("%d, %d, %d ", throttle, brake, clutch);
-	    //pc.printf("\r\n");
-	    throttle=throttlepedal->read_u16();
-	    brake=brakepedal->read_u16();
-	    clutch=clutchpedal->read_u16();
+	    // read analog axis status
+	    gFFBDevice.mConfig.hardwareConfig.updateAnalogAxis(throttle, brake, clutch);
 
-	    if(throttlepedal) throttle = ScaleAnalogAxis(throttle, analogAxisInvert[GAS], analogAxisMinValue[GAS], analogAxisMaxValue[GAS]);
-	    if(brakepedal) brake = ScaleAnalogAxis(brake, analogAxisInvert[BRAKE], analogAxisMinValue[BRAKE], analogAxisMaxValue[BRAKE]);
-	    if(clutchpedal) clutch = ScaleAnalogAxis(clutch, analogAxisInvert[CLUTCH], analogAxisMinValue[CLUTCH], analogAxisMaxValue[CLUTCH]);
+	    // read debounced buttons
+	    uint32_t buttons = gFFBDevice.mConfig.hardwareConfig.readButtons();
+	    //pc.printf("buttons %d \r\n", button);
 
-	    pc.printf("%d, %d, %d \r\n", throttle, brake, clutch);
-
-
-	    joystick.update(brake, clutch, throttle, rudder, encoderCounter, y, button, hat);
+	    joystick.update(brake, clutch, throttle, rudder, encoderCounter, y, buttons, hat);
 
         if(joystick.getPendingReceivedReportCount())
         {

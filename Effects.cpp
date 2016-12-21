@@ -5,12 +5,12 @@
 #include "ffb.h"
 #include "cFFBDevice.h"
 
-void cDeviceConfig::SetDefault ()
+/*void cDeviceConfig::SetDefault ()
 {
 	mVersion = 0;//VERSION;
 	mMainGain = 127;
 	mSpringGain = mFrictionGain = mDamperGain = mInertiaGain = mConstantGain = mPeriodicGain = mForceTableGain = 127;
-}
+}*/
 
 s32 ConstrainEffect(s32 val)
 {
@@ -55,16 +55,16 @@ s32 cFFBDevice::CalcTorqueCommand (s32 *readEncoderPos)
 				case USB_EFFECT_SAWTOOTHUP:
 					break;
 				case USB_EFFECT_SPRING:
-					command += constrain(SpringEffect(ef.offset - pos, (mag*mConfig.mSpringGain) >> 7), -(ef.negativeSaturation << 8), ef.positiveSaturation << 8);
+					command += constrain(SpringEffect(ef.offset - pos, (mag*mConfig.profileConfig.mSpringGain) >> 7), -(ef.negativeSaturation << 8), ef.positiveSaturation << 8);
 					break;
 				case USB_EFFECT_FRICTION:
-					stat = smSetParameter(mSMBusHandle, 1, SMP_TORQUE_EFFECT_FRICTION, (mag*mConfig.mFrictionGain) >> 3);
+					stat = smSetParameter(mSMBusHandle, 1, SMP_TORQUE_EFFECT_FRICTION, (mag*mConfig.profileConfig.mFrictionGain) >> 3);
 					break;
 				case USB_EFFECT_DAMPER:
-					cumul_damper+=(mag*mConfig.mDamperGain) >> 8;
+					cumul_damper+=(mag*mConfig.profileConfig.mDamperGain) >> 8;
 					break;
 				case USB_EFFECT_INERTIA:
-					stat = smSetParameter(mSMBusHandle, 1, SMP_TORQUE_EFFECT_INERTIA,(mag*mConfig.mInertiaGain) >> 9);
+					stat = smSetParameter(mSMBusHandle, 1, SMP_TORQUE_EFFECT_INERTIA,(mag*mConfig.profileConfig.mInertiaGain) >> 9);
 					break;
 				case USB_EFFECT_CUSTOM:
 					break;
@@ -73,12 +73,12 @@ s32 cFFBDevice::CalcTorqueCommand (s32 *readEncoderPos)
 				}
 			}
 		}
-		command = (command*mConfig.mMainGain) >> 14;
+		command = (command*mConfig.profileConfig.mMainGain) >> 14;
 	}
 	if (gFFBDevice.mAutoCenter)
 	{
-		command += SpringEffect(-pos, mConfig.mDesktopSpringGain);
-		cumul_damper += mConfig.mDesktopDamperGain;
+		command += SpringEffect(-pos, mConfig.hardwareConfig.mDesktopSpringGain);
+		cumul_damper += mConfig.hardwareConfig.mDesktopDamperGain;
 	}
 	if(prev_cumul_damper!=cumul_damper)//send only if changed to avoid update rate to drop
 		stat = smSetParameter(mSMBusHandle, 1, SMP_TORQUE_EFFECT_DAMPING, cumul_damper);
