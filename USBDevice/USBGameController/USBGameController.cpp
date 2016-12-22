@@ -46,7 +46,8 @@ bool USBGameController::update(uint16_t brake, uint16_t clutch, uint16_t throttl
 }
 
 #define AddAxisValue(m_val)		{report.data[i++] = m_val & 0xff; report.data[i++] = ((m_val & 0xff00) >> 8);}
- 
+
+int counter;
 bool USBGameController::update() 
 {
 	HID_REPORT report;
@@ -70,7 +71,13 @@ bool USBGameController::update()
 	report.data[i++] = ((Buttons & 0xff000000) >>24);
 	report.length = i;
 
-	return send(&report);
+	// interrupts off
+	counter++;
+//	__disable_irq();
+	bool value = send(&report);
+	// interrupts on
+//	__enable_irq();
+	return value;
 }
 
 bool USBGameController::throttle(int16_t t) {

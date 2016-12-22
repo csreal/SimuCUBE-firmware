@@ -93,7 +93,7 @@ USBHAL::USBHAL(void) {
 
     instance = this;
     NVIC_SetVector(OTG_FS_IRQn, (uint32_t)&_usbisr);
-    NVIC_SetPriority(OTG_FS_IRQn, 1);
+    NVIC_SetPriority(OTG_FS_IRQn, 5);
 }
 
 USBHAL::~USBHAL(void) {
@@ -309,6 +309,7 @@ void USBHAL::_usbisr(void) {
 
 
 void USBHAL::usbisr(void) {
+	__disable_irq();
     if (OTG_FS->GREGS.GINTSTS & (1 << 11)) { // USB Suspend
         suspendStateChanged(1);
     };
@@ -412,6 +413,7 @@ void USBHAL::usbisr(void) {
         SOF((OTG_FS->GREGS.GRXSTSR >> 17) & 0xF);
         OTG_FS->GREGS.GINTSTS = (1 << 3);
     }
+    __enable_irq();
 }
 
 

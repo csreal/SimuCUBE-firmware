@@ -323,6 +323,7 @@ bool WaitForIndexPulse( int &indexPos )
 
 bool InitializeDrive()
 {
+	pc.printf("1\r\n");
 	gFFBDevice.mSMBusHandle = smOpenBus("MBEDSERIAL");
 	SMSerial.baud(460800);
 
@@ -330,10 +331,17 @@ bool InitializeDrive()
 
 	broadcastSystemStatus(DriveInit);
 
+	//clear sm bus error from previous session. hope not need it
+	//smint32 dummy;
+	//smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &dummy);
+	//resetCumulativeStatus(gFFBDevice.mSMBusHandle);
+
+
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 0);
 	//read some ioni drive parameters
-	smint32 driveStatus, initialPosition, homingConfigurationBits, driveFWversion, encoderResolution;
-	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
-	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &driveFWversion);
+	smint32 driveStatus=-1, initialPosition=-1, homingConfigurationBits, driveFWversion=-1, encoderResolution=-1;
+	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_FIRMWARE_VERSION, &driveFWversion);
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
 	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &encoderResolution);//read encoder resolution from ioni. TODO store this value somewhere for wheel angle scaling use
 	encoderResolution*=4;//PPR to CPR
 
@@ -342,7 +350,6 @@ bool InitializeDrive()
 	//comm error
 	if(getCumulativeStatus(gFFBDevice.mSMBusHandle)!=SM_OK)
 		broadcastSystemStatus(DriveConnectionError,true);
-
 	if(driveFWversion<1100)//V1092 would be enough, but it has bug in SMP_FAULT_BEHAVIOR which is fixed in the next version
 		broadcastSystemStatus(DriveFWUnsupported, true);
 
@@ -442,17 +449,23 @@ int main()
     {
 	    //s32 x = EncoderRead();//direct read of quadrature encoder
     	s32 encoderCounter;
-	    gFFBDevice.CalcTorqueCommand(&encoderCounter);//reads encoder counter too
+	    gFFBDevice.CalcTorqueCommand(&encoderCounter); //reads encoder counter too
+	    //pc.printf("%ld ", encoderCounter);
 
+	    // limit encoderCounter to 16bit
 	    encoderCounter = constrain(encoderCounter + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
-	    pc.printf("tick\r\n");
+	    //encoderCounter = gFFBDevice.mConfig.profileConfig.scaleAngle(encoderCounter);
+
+	    //pc.printf("constrained encoderCounter %ld", encoderCounter);
+	    //pc.printf("\r\n");
+	    //pc.printf("tick\r\n");
 
 	    // read analog axis status
 	    gFFBDevice.mConfig.hardwareConfig.updateAnalogAxis(throttle, brake, clutch);
 
 	    // read debounced buttons
 	    uint32_t buttons = gFFBDevice.mConfig.hardwareConfig.readButtons();
-	    //pc.printf("buttons %d \r\n", button);
+	    //pc.printf("buttons %d \r\n", buttons);
 
 	    joystick.update(brake, clutch, throttle, rudder, encoderCounter, y, buttons, hat);
 
@@ -461,6 +474,6 @@ int main()
         	HID_REPORT recv_report=joystick.getReceivedReport();
 	       	joystick.handleReceivedHIDReport(recv_report);
         }
-	    wait(0.001*CONTROL_PERIOD_MS);
+        	   wait(0.001*CONTROL_PERIOD_MS);
     }
 }

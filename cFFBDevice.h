@@ -35,7 +35,7 @@ public:
 	void setDefault() {
 		// reset everything to zero here.
 		// pointers to objects have to be deleted.
-		mMaxAngle = 0;
+		mMaxAngle = 270;
 		mFlags = 0;
 		mNbTaps = 0;
 		mMainGain = 0;
@@ -48,6 +48,25 @@ public:
 		mForceTableGain = 0;
 	}
 
+	// scales current raw value (X_AXIS_LOG_MIN, X_AXIS_LOG_MAX) from encoder to valid value
+	// between scaled from full left lock to full right lock
+	// does not do anything yet
+//	uint16_t scaleAngle(s32 encoderValue) {
+//		uint16_t output =
+//		return output;
+//	}
+
+//	uint16_t ScaleAnalogAxis(uint16_t raw, bool invert, uint16_t minvalue, uint16_t maxvalue) {
+//		uint16_t output = (uint16_t)(65535.0*((float)raw-(float)minvalue)/(float)(maxvalue-minvalue));
+//		if(invert) {
+//			return 65535-output;
+//		}
+//		else {
+//			return output;
+//		}
+//	}
+
+	// mMaxAngle is in degrees of rotation.
 	s32 mMaxAngle;
 
 	u8 mFlags;
@@ -129,7 +148,10 @@ public:
 		}
 
 		for(int i=0; i<32; i++) {
-			buttonInputs[i]=0;
+			if(buttonInputs[i] != 0 ) {
+				delete buttonInputs[i];
+				buttonInputs[i]=0;
+			}
 		}
 	}
 
