@@ -35,7 +35,7 @@ public:
 	void setDefault() {
 		// reset everything to zero here.
 		// pointers to objects have to be deleted.
-		mMaxAngle = 270;
+		mMaxAngle = 270.0;
 		mFlags = 0;
 		mNbTaps = 0;
 		mMainGain = 0;
@@ -67,7 +67,7 @@ public:
 //	}
 
 	// mMaxAngle is in degrees of rotation.
-	s32 mMaxAngle;
+	float mMaxAngle;
 
 	u8 mFlags;
 	u8 mNbTaps;
@@ -92,8 +92,9 @@ class cHardwareConfig
 {
 public:
 	// steering offset
-	s32 mOffset;
+	smint32 mEncoderOffset;
 
+	smint32 mEncoderCPR;
 	// analog axis things
 	PinName analogAxisPinCfg[3];
     AnalogIn* throttlepedal;
@@ -115,7 +116,8 @@ public:
 	void setDefault() {
 		// reset everything to zero here.
 		// pointers to objects have to be deleted.
-		mOffset = 0;
+		mEncoderOffset = 0;
+		mEncoderCPR=0;
 		mDesktopSpringGain = 0;
 		mDesktopDamperGain = 0;
 
@@ -223,7 +225,7 @@ public:
 	cHardwareConfig hardwareConfig;
 	cProfileConfig profileConfig;
 	u8 *GetProfileConfigAddr()			{ return ((u8*)&profileConfig.mMaxAngle); } // variables listed here must be
-	u8 *GetHardwareConfigAddr()			{ return ((u8*)&hardwareConfig.mOffset); }  // first in class definition.
+	u8 *GetHardwareConfigAddr()			{ return ((u8*)&hardwareConfig.mEncoderOffset); }  // first in class definition.
 
 									// src, dest, size
 	void getProfile(u8 *conf)		{ myMemCpy(GetProfileConfigAddr(), conf, sizeof(cProfileConfig)); }

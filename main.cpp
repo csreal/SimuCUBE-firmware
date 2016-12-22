@@ -342,8 +342,8 @@ bool InitializeDrive()
 	smint32 driveStatus=-1, initialPosition=-1, homingConfigurationBits, driveFWversion=-1, encoderResolution=-1;
 	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_FIRMWARE_VERSION, &driveFWversion);
 	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
-	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &encoderResolution);//read encoder resolution from ioni. TODO store this value somewhere for wheel angle scaling use
-	encoderResolution*=4;//PPR to CPR
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);//read encoder resolution from ioni. TODO store this value somewhere for wheel angle scaling use
+	gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*=4;//PPR to CPR
 
 	led4=led5=led6=0;
 
@@ -441,6 +441,8 @@ int main()
     int8_t hat = 0;
     uint16_t y = 0;
 
+    float steeringAngle = 0;
+
     // read device config from flash (currently does nothing)
     // a fixed config is applied in cFFBDevice init
     readConfigFromFlash();
@@ -450,15 +452,27 @@ int main()
 	    //s32 x = EncoderRead();//direct read of quadrature encoder
     	s32 encoderCounter;
 	    gFFBDevice.CalcTorqueCommand(&encoderCounter); //reads encoder counter too
-	    //pc.printf("%ld ", encoderCounter);
 
 	    // limit encoderCounter to 16bit
-	    encoderCounter = constrain(encoderCounter + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
-	    //encoderCounter = gFFBDevice.mConfig.profileConfig.scaleAngle(encoderCounter);
+	    // encoderCounter = constrain(encoderCounter + 0x7fff, X_AXIS_LOG_MIN, X_AXIS_LOG_MAX);
 
-	    //pc.printf("constrained encoderCounter %ld", encoderCounter);
-	    //pc.printf("\r\n");
-	    //pc.printf("tick\r\n");
+	    // STEERING ANGLE CALCULATION
+	    // counts per rev is stored at gFFBDevice.mConfig.hardwareConfig.mEncoderCPR
+	    // set MAX lock-to-lock degrees is stored at gFFBDevice.mConfig.profileConfig.mMaxAngle
+	    // 1 rev is 360.0 degrees
+
+	    //todo: make float comparisons safe!
+	    steeringAngle = (float)encoderCounter/(float)gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*360.0;
+	    if(steeringAngle < (-1)*gFFBDevice.mConfig.profileConfig.mMaxAngle/2 ) {
+	    	steeringAngle = (-1)*gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+	    	// todo: endstop effect here!
+	    } else if (steeringAngle > gFFBDevice.mConfig.profileConfig.mMaxAngle/2 ) {
+	    	steeringAngle = gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+	    	// todo: endstop effect here!
+	    }
+
+	    // scale steeringAngle to uint16_t range 0 - 65535. SteeringAngle 0 = 32768.
+	    int16_t steering = 0x7fff + (int)(steeringAngle+0.5);  // 0.5 is needed for rounding
 
 	    // read analog axis status
 	    gFFBDevice.mConfig.hardwareConfig.updateAnalogAxis(throttle, brake, clutch);
@@ -467,7 +481,7 @@ int main()
 	    uint32_t buttons = gFFBDevice.mConfig.hardwareConfig.readButtons();
 	    //pc.printf("buttons %d \r\n", buttons);
 
-	    joystick.update(brake, clutch, throttle, rudder, encoderCounter, y, buttons, hat);
+	    joystick.update(brake, clutch, throttle, rudder, steering, y, buttons, hat);
 
         if(joystick.getPendingReceivedReportCount())
         {
