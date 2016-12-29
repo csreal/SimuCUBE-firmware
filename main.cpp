@@ -447,6 +447,10 @@ int main()
     // a fixed config is applied in cFFBDevice init
     readConfigFromFlash();
 
+    // init min and max steering angles based on user profile.
+    float minSteeringAngle = (-1)*gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+    float maxSteeringAngle = gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+
     while (1) 
     {
 	    //s32 x = EncoderRead();//direct read of quadrature encoder
@@ -463,11 +467,11 @@ int main()
 
 	    //todo: make float comparisons safe!
 	    steeringAngle = (float)encoderCounter/(float)gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*360.0;
-	    if(steeringAngle < (-1)*gFFBDevice.mConfig.profileConfig.mMaxAngle/2 ) {
-	    	steeringAngle = (-1)*gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+	    if(steeringAngle < minSteeringAngle ) {
+	    	steeringAngle = minSteeringAngle;
 	    	// todo: endstop effect here!
-	    } else if (steeringAngle > gFFBDevice.mConfig.profileConfig.mMaxAngle/2 ) {
-	    	steeringAngle = gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+	    } else if (steeringAngle > maxSteeringAngle ) {
+	    	steeringAngle = maxSteeringAngle;
 	    	// todo: endstop effect here!
 	    }
 
