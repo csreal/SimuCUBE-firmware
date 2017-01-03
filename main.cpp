@@ -332,9 +332,9 @@ bool InitializeDrive()
 	broadcastSystemStatus(DriveInit);
 
 	//clear sm bus error from previous session. hope not need it
-	//smint32 dummy;
-	//smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &dummy);
-	//resetCumulativeStatus(gFFBDevice.mSMBusHandle);
+	smint32 dummy;
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &dummy);
+	resetCumulativeStatus(gFFBDevice.mSMBusHandle);
 
 
 	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 0);
@@ -342,7 +342,7 @@ bool InitializeDrive()
 	smint32 driveStatus=-1, initialPosition=-1, homingConfigurationBits, driveFWversion=-1, encoderResolution=-1;
 	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_FIRMWARE_VERSION, &driveFWversion);
 	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
-	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);//read encoder resolution from ioni. TODO store this value somewhere for wheel angle scaling use
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);//read encoder resolution from ioni.
 	gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*=4;//PPR to CPR
 
 	led4=led5=led6=0;
@@ -415,7 +415,6 @@ bool InitializeDrive()
 
 int main()
 {
-
 	HAL_Init();
 	SystemClock_Config();
 
@@ -427,10 +426,12 @@ int main()
 	InitializeDrive();
 	broadcastSystemStatus(Operational, false);
 
-	pc.printf("motor init done!\n\r");
+	if(debugMode)pc.printf("motor init done!\n\r");
     EncoderInitialize();
+    if(debugMode)pc.printf("encoder init done!\n\r");
 	InitializeTorqueCommand();
 
+	pc.printf("encoder CPR %d\r\n", gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);
 
     // unsigned 16-bit for these, as joystick API needs it.
     // calculated internally with more accuracy when reading/scaling.
@@ -453,8 +454,8 @@ int main()
 
     while (1) 
     {
-	    //s32 x = EncoderRead();//direct read of quadrature encoder
-    	s32 encoderCounter;
+    	//s32 x = EncoderRead();//direct read of quadrature encoder
+    	s32 encoderCounter=0;
 	    gFFBDevice.CalcTorqueCommand(&encoderCounter); //reads encoder counter too
 
 	    // limit encoderCounter to 16bit
@@ -467,7 +468,7 @@ int main()
 
 	    //todo: make float comparisons safe!
 	    steeringAngle = (float)encoderCounter/(float)gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*360.0;
-	    if(steeringAngle < minSteeringAngle ) {
+	    if(steeringAngle < minSteeringAngle) {
 	    	steeringAngle = minSteeringAngle;
 	    	// todo: endstop effect here!
 	    } else if (steeringAngle > maxSteeringAngle ) {
@@ -475,9 +476,18 @@ int main()
 	    	// todo: endstop effect here!
 	    }
 
-	    // scale steeringAngle to uint16_t range 0 - 65535. SteeringAngle 0 = 32768.
-	    int16_t steering = 0x7fff + (int)(steeringAngle+0.5);  // 0.5 is needed for rounding
+	    if(debugMode)pc.printf("encoder %u", encoderCounter);
+	    if(debugMode)pc.printf(" angle %f", steeringAngle);
+	    // todo: scale steeringAngle to uint16_t range 0 - 65535. SteeringAngle 0 = 32768 (0x7fff).
 
+	    //directly to int
+	    int16_t steering = (int16_t)(steeringAngle/maxSteeringAngle*32768.0);// + 0.5);
+
+	    if(debugMode)pc.printf(" direct int %d", steering);
+
+	    uint16_t steeringScaled = 0x7fff - steering;
+
+	    if(debugMode)pc.printf(" raw joyval %u\r\n", steeringScaled);
 	    // read analog axis status
 	    gFFBDevice.mConfig.hardwareConfig.updateAnalogAxis(throttle, brake, clutch);
 
@@ -485,7 +495,7 @@ int main()
 	    uint32_t buttons = gFFBDevice.mConfig.hardwareConfig.readButtons();
 	    //pc.printf("buttons %d \r\n", buttons);
 
-	    joystick.update(brake, clutch, throttle, rudder, steering, y, buttons, hat);
+	    joystick.update(brake, clutch, throttle, rudder, steeringScaled, y, buttons, hat);
 
         if(joystick.getPendingReceivedReportCount())
         {
