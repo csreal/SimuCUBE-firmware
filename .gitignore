@@ -38,3 +38,5 @@ ion_rom.bin
 *.d
 *.hex
 *.bin
+
+Debug/*
