@@ -41,10 +41,9 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
+#include <main.h>
 #include "stm32f4xx_hal.h"
-#include "usb_device.h"
-//#include "usbgamecontroller.h"
+
 
 /* USER CODE BEGIN Includes */
 
@@ -63,7 +62,9 @@ UART_HandleTypeDef huart3;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void Error_Handler(void);
+#ifdef __cplusplus
+extern "C" void Error_Handler(void);
+#endif
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_USART3_UART_Init(void);
@@ -76,8 +77,17 @@ static void MX_I2C1_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+#include "usb_device.h"
+#include "usbgamecontroller.h"
+
+
 
 /* USER CODE END 0 */
+
+
+
+
+
 
 int main(void)
 {
@@ -104,17 +114,54 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
+  USBGameController joystick;
+
+
+  int32_t i = 0;
+  int16_t throttle = 0;
+  int16_t rudder = 0;
+  int16_t x = 0;
+  int16_t y = 0;
+  int32_t radius = 120;
+  int32_t angle = 0;
+  uint32_t button = 0;
+  int8_t hat = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-  /* USER CODE END WHILE */
 
+  while (1) {
+      // Basic Joystick
+	  throttle = i*100 ;
+      //throttle = (i >> 8) & 0xFF; // value -127 .. 128
+      rudder = (i >> 8) & 0xFF;   // value -127 .. 128
+      //button = (i >> 8) & 0x0F;   // value    0 .. 15, one bit per button
+      button=i;
+//        hat    = (i >> 8) & 0x03;   // value 0, 1, 2, 3 or 4 for neutral
+      hat    = (i >> 8) & 0x07;   // value 0..7 or 8 for neutral
+      i++;
+
+      //x = cos((double)angle*3.14/180.0)*radius;  // value -127 .. 128
+      //y = sin((double)angle*3.14/180.0)*radius;  // value -127 .. 128
+      angle += 3;
+
+      x=6000;
+      y=0;
+      joystick.update(throttle, throttle,throttle,rudder, x, y, button, hat);
+
+      for(int j=0; j<100000;j++)
+      {
+    	  asm("nop");
+      }
+      //wait(0.001);
+
+
+  /* USER CODE END WHILE */
+  }
   /* USER CODE BEGIN 3 */
 
-  }
+
   /* USER CODE END 3 */
 
 }
