@@ -134,9 +134,10 @@ void USBGameController::_init()
 	Hat = 0x00;
 }
 
+
+#if 0
 bool USBGameController::USBCallback_request()
 {
-#if 0
 	CONTROL_TRANSFER * transfer = getTransferPtr();
 	u8 report_id = DESCRIPTOR_INDEX(transfer->setup.wValue);
 	int r = transfer->setup.bRequest;
@@ -186,47 +187,42 @@ bool USBGameController::USBCallback_request()
 		}
 	}
 	return (USBHID::USBCallback_request());
-#endif
 	return true;
 }
 
 void USBGameController::USBCallback_requestCompleted(uint8_t * buf, uint32_t length)
 {
-#if 0
 	CONTROL_TRANSFER * transfer = getTransferPtr();
 	u8 report_id = DESCRIPTOR_INDEX(transfer->setup.wValue);
 	int r = transfer->setup.bRequest;
 	int requestType = transfer->setup.bmRequestType.Type;
 	if ((r == HID_SET_REPORT)&&(requestType == REQUEST_INTERFACE)&&(report_id == 5))
 		FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t *)buf, &mSetReportAnwser);
-#endif
 }
 
 u32 USBGameController::USB_SendControl (u8 flags, const u8 *d, u32 len)
 {
-#if 0
 	CONTROL_TRANSFER * transfer = getTransferPtr();
 	getTransferPtr()->remaining = len;
 	getTransferPtr()->ptr = (u8*) d;
 	getTransferPtr()->direction = DEVICE_TO_HOST;
 	return (len);
-#endif
 	return 0;
 }
 
 u32 USBGameController::USB_RecvControl (u8 *d, u32 len)
 {
-#if 0
 	CONTROL_TRANSFER * transfer = getTransferPtr();
 	transfer->remaining = len;
 	transfer->notify = true;
 	transfer->direction = HOST_TO_DEVICE;
 	return (len);
-#endif
 	return 0;
 }
+#endif
 
-bool USBGameController::EPINT_OUT_callback()
+
+bool USBGameController::EPINT_OUT_callback(uint8_t *report)
 {
 #if 0
 	bool returnval;
@@ -243,7 +239,10 @@ bool USBGameController::EPINT_OUT_callback()
 
     return returnval;
 #endif
-    return false;
+
+    bool returnval;
+
+	return returnval;
 }
 
 unsigned int USBGameController::getPendingReceivedReportCount()

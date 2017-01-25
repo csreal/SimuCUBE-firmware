@@ -79,7 +79,7 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN 0 */
 #include "usb_device.h"
 #include "usbgamecontroller.h"
-
+extern USBGameController joystick;
 
 
 /* USER CODE END 0 */
@@ -114,7 +114,7 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
-  USBGameController joystick;
+
 
 
   int32_t i = 0;
@@ -132,6 +132,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   while (1) {
+#if 0
       // Basic Joystick
 	  throttle = i*100 ;
       //throttle = (i >> 8) & 0xFF; // value -127 .. 128
@@ -148,6 +149,7 @@ int main(void)
 
       x=6000;
       y=0;
+#endif
       joystick.update(throttle, throttle,throttle,rudder, x, y, button, hat);
 
       for(int j=0; j<100000;j++)

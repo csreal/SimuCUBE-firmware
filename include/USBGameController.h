@@ -302,7 +302,7 @@ class USBGameController {
          *
          * @returns if handle by subclass, return true
          */
-         bool EPINT_OUT_callback();
+         bool EPINT_OUT_callback(uint8_t *report);
 	
 
 		/*
@@ -312,7 +312,7 @@ class USBGameController {
 		*
 		* @returns true if class handles this request
 		*/
-		bool USBCallback_request();
+		//bool USBCallback_request();
 
 		/*
 		* Called by USBDevice on Endpoint0 request completion
@@ -324,7 +324,7 @@ class USBGameController {
 		* @param buf buffer received on endpoint 0
 		* @param length length of this buffer
 		*/
-		void USBCallback_requestCompleted(uint8_t * buf, uint32_t length);
+		//void USBCallback_requestCompleted(uint8_t * buf, uint32_t length);
 	
 	    bool handleReceivedHIDReport(HID_REPORT report);
 
@@ -332,8 +332,8 @@ class USBGameController {
 
         HID_REPORT getReceivedReport();
 
-	u32 USB_SendControl (u8 flags, const u8 *d, u32 len);
-	u32 USB_RecvControl (u8 *d, u32 len);
+	//u32 USB_SendControl (u8 flags, const u8 *d, u32 len);
+	//u32 USB_RecvControl (u8 *d, u32 len);
 
      private:
          bool FFBEnabled;

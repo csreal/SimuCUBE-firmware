@@ -847,7 +847,7 @@ __ALIGN_BEGIN static uint8_t CUSTOM_HID_ReportDesc_FS[USBD_CUSTOM_HID_REPORT_DES
   */
 static int8_t CUSTOM_HID_Init_FS     (void);
 static int8_t CUSTOM_HID_DeInit_FS   (void);
-static int8_t CUSTOM_HID_OutEvent_FS (uint8_t event_idx, uint8_t state);
+static int8_t CUSTOM_HID_OutEvent_FS (uint8_t* eventpointer);
  
 
 USBD_CUSTOM_HID_ItfTypeDef USBD_CustomHID_fops_FS = 
@@ -892,9 +892,10 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
   * @param  state: event state
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CUSTOM_HID_OutEvent_FS  (uint8_t event_idx, uint8_t state)
+static int8_t CUSTOM_HID_OutEvent_FS  (uint8_t* eventpointer)
 { 
-  /* USER CODE BEGIN 6 */ 
+  /* USER CODE BEGIN 6 */
+	joystick.EPINT_OUT_callback(eventpointer);
   return (0);
   /* USER CODE END 6 */ 
 }
