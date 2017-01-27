@@ -118,6 +118,10 @@
 #define TRANSFER_RELEASE	0x40
 #define TRANSFER_ZERO		0x20
 
+extern testimuuttuja;
+//extern uint8_t gamecontroller_callback_wrapper(uint8_t *report);
+//extern gamecontroller_callback_wrapper(uint8_t*);
+
 /* USER CODE END PRIVATE_DEFINES */
 
 /**
@@ -892,12 +896,14 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
   * @param  state: event state
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CUSTOM_HID_OutEvent_FS  (uint8_t* eventpointer)
+static int8_t CUSTOM_HID_OutEvent_FS(uint8_t *eventpointer)
 { 
-  /* USER CODE BEGIN 6 */
-	joystick.EPINT_OUT_callback(eventpointer);
-  return (0);
-  /* USER CODE END 6 */ 
+	/* USER CODE BEGIN 6 */
+	//joystick.EPINT_OUT_callback(eventpointer);
+	return gamecontroller_callback_wrapper(eventpointer);
+	testimuuttuja = 5;
+	return (0);
+  	/* USER CODE END 6 */
 }
 
 /* USER CODE BEGIN 7 */ 

@@ -14,6 +14,8 @@
 #include "ffb.h"
 #include "USBHID_Types.h"
 
+//typedef uint8_t (* EPOUTCALLBACK)(uint8_t* report);
+
 #define REPORT_ID_JOYSTICK  4
 
 // bmRequestType
@@ -302,7 +304,8 @@ class USBGameController {
          *
          * @returns if handle by subclass, return true
          */
-         bool EPINT_OUT_callback(uint8_t *report);
+         uint8_t EPINT_OUT_callback(uint8_t *report);
+
 	
 
 		/*

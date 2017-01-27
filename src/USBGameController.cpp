@@ -222,7 +222,7 @@ u32 USBGameController::USB_RecvControl (u8 *d, u32 len)
 #endif
 
 
-bool USBGameController::EPINT_OUT_callback(uint8_t *report)
+uint8_t USBGameController::EPINT_OUT_callback( uint8_t *report)
 {
 #if 0
 	bool returnval;
@@ -239,8 +239,11 @@ bool USBGameController::EPINT_OUT_callback(uint8_t *report)
 
     return returnval;
 #endif
-
-    bool returnval;
+    //USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
+    memcpy(receivedReports[receivedReportBufferHead].data, report, USBD_CUSTOMHID_OUTREPORT_BUF_SIZE); //hhid->Report_buf, USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
+    receivedReportBufferHead=(receivedReportBufferHead+1)&(RX_REPORT_BUFFER_COUNT-1);
+    asm("nop");
+    bool returnval=true;
 
 	return returnval;
 }
@@ -257,3 +260,4 @@ HID_REPORT USBGameController::getReceivedReport()
 	 receivedReportBufferTail=(receivedReportBufferTail+1)&(RX_REPORT_BUFFER_COUNT-1);
 	 return receivedReports[takeFrom];
 }
+

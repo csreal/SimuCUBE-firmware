@@ -46,6 +46,7 @@
 
 
 /* USER CODE BEGIN Includes */
+//#include "stdio.h"
 
 /* USER CODE END Includes */
 
@@ -58,8 +59,11 @@ UART_HandleTypeDef huart3;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
+
 /* USER CODE END PV */
 
+
+/* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 #ifdef __cplusplus
@@ -71,17 +75,21 @@ static void MX_USART3_UART_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
 
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+
+
 #include "usb_device.h"
 #include "usbgamecontroller.h"
-extern USBGameController joystick;
 
+USBGameController joystick;
 
+extern "C" {
+uint8_t gamecontroller_callback_wrapper(uint8_t *report) {
+	return joystick.EPINT_OUT_callback(report);
+}
+}
 /* USER CODE END 0 */
 
 
@@ -152,10 +160,18 @@ int main(void)
 #endif
       joystick.update(throttle, throttle,throttle,rudder, x, y, button, hat);
 
-      for(int j=0; j<100000;j++)
+      if(joystick.getPendingReceivedReportCount())
       {
-    	  asm("nop");
+      	HID_REPORT recv_report=joystick.getReceivedReport();
+	       	joystick.handleReceivedHIDReport(recv_report);
       }
+      // HAL_Delay = milliseconds
+      HAL_Delay(1);//wait(0.001*CONTROL_PERIOD_MS);
+
+      // here's how you print:
+      printf("test_string.\r\n");
+      uint8_t testistringi[] = "testistringi";
+      HAL_UART_Transmit_IT(&huart1,testistringi,sizeof(testistringi));// Sending in IT mode
       //wait(0.001);
 
 
@@ -167,6 +183,27 @@ int main(void)
   /* USER CODE END 3 */
 
 }
+
+/**
+  * @brief  Retargets the C library printf function to the USART.
+  * @param  None
+  * @retval None
+  */
+void __io_putchar(uint8_t ch) {
+	/**
+	 * \brief		__io_putchar - A routine to transmit a single character out the serial port
+	 * \return		void
+	 * \param[in]	ch - uint8_t the character to transmit
+	 * \author		andreichichak
+	 * \date		Oct 16, 2015
+	 * \details		This routine assumes that we will be using UART2. A timeout value of 1ms (4th parameter)
+	 * 				gives a retry if the transmit buffer is full when back to back characters are transmitted,
+	 * 				avoiding dropping characters.
+	 */
+
+	HAL_UART_Transmit_IT(&huart1, &ch, 1);
+}
+
 
 /** System Clock Configuration
 */
@@ -271,7 +308,7 @@ static void MX_USART1_UART_Init(void)
 {
 
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 230400;//115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
