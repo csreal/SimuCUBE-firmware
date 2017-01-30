@@ -58,6 +58,23 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+#ifdef __GNUC__
+  /* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
+     set to 'Yes') calls __io_putchar() */
+  #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+  #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif /* __GNUC__ */
+
+
+void delay_us(uint32_t delay_us) {
+	uint32_t counter = 0;
+	counter = (delay_us * (SystemCoreClock / 1000000U));
+	while(counter != 0U)
+	{
+		counter--;
+	}
+}
 
 
 /* USER CODE END PV */
@@ -75,6 +92,11 @@ static void MX_USART3_UART_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
 
+
+
+
+
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -82,6 +104,8 @@ static void MX_I2C1_Init(void);
 
 #include "usb_device.h"
 #include "usbgamecontroller.h"
+
+//#include "cFFBDevice.h"
 
 USBGameController joystick;
 
@@ -91,6 +115,80 @@ uint8_t gamecontroller_callback_wrapper(uint8_t *report) {
 }
 }
 /* USER CODE END 0 */
+
+
+
+
+bool SMSerialMasterIsMe=true;
+
+int SMPortWrite(const char *data, int len)
+{
+	int i;
+
+	//if we are not in control of SM bus, return
+	if(SMSerialMasterIsMe==false)
+		return 0;
+
+	//write
+	//SMSerialTXEN=1;
+
+	//#define RS485_TXEN_STM_Pin GPIO_PIN_8
+	//#define RS485_TXEN_STM_GPIO_Port GPIOD
+
+	HAL_GPIO_WritePin(RS485_TXEN_STM_GPIO_Port, RS485_TXEN_STM_Pin, GPIO_PIN_SET);  // sets pin high
+	//HAL_GPIO_WritePin(RS485_TXEN_STM_GPIO_Port,RS485_TXEN_STM_Pin,GPIO_PIN_RESET) // sets pin low
+
+	//for(i=0;i<len;i++)
+	//	SMSerial.putc(data[i]);
+	HAL_UART_Transmit(&huart3, (uint8_t *)data, len, 0xFFFF);
+	//wait(43e-6);//keep TXEN up for last 2 bytes because putc returns before data is physically out
+	delay_us(43);
+
+	//SMSerialTXEN=0;
+	HAL_GPIO_WritePin(RS485_TXEN_STM_GPIO_Port, RS485_TXEN_STM_Pin, GPIO_PIN_RESET); // sets pin low
+
+	return len;
+}
+
+//extern smuint16 readTimeoutMs;
+
+
+int SMPortReadByte( char *byte )
+{
+	// HAL_UART_Receive(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size, uint32_t Timeout)
+	/*
+	Timer timeout;
+	timeout.start();
+	timeout.reset();
+	*/
+
+	//if we are not in control of SM bus, return
+	if(SMSerialMasterIsMe==false)
+		return 0;
+
+	// try to read one byte with 200ms timout
+	HAL_StatusTypeDef status = HAL_UART_Receive(&huart3, (uint8_t *)byte, 1, 200);
+	if(status != HAL_OK ) {
+		return 0;	// something went wrong, or timeout.
+	}
+	return 1;
+
+	//try reading a byte
+//	bool done=false;
+
+	/*
+	do
+	{
+		if(SMSerial.readable())
+		{
+			*byte=SMSerial.getc();
+			return 1;
+		}
+	} while(timeout.read()<0.2);//loop until timeout or data received
+*/
+	//timeouted
+	//return 0;
+}
 
 
 
@@ -121,7 +219,9 @@ int main(void)
   MX_USB_DEVICE_Init();
 
   /* USER CODE BEGIN 2 */
-
+//  setvbuf(stdin, NULL, _IONBF, 0);
+//  setvbuf(stdout, NULL, _IONBF, 0);
+//  setvbuf(stderr, NULL, _IONBF, 0);
 
 
 
@@ -169,9 +269,8 @@ int main(void)
       HAL_Delay(1);//wait(0.001*CONTROL_PERIOD_MS);
 
       // here's how you print:
-      printf("test_string.\r\n");
-      uint8_t testistringi[] = "testistringi";
-      HAL_UART_Transmit_IT(&huart1,testistringi,sizeof(testistringi));// Sending in IT mode
+      int i = 666;
+      printf("test %d string\r\n", i);	// works!
       //wait(0.001);
 
 
@@ -184,25 +283,21 @@ int main(void)
 
 }
 
+
 /**
   * @brief  Retargets the C library printf function to the USART.
   * @param  None
   * @retval None
   */
-void __io_putchar(uint8_t ch) {
-	/**
-	 * \brief		__io_putchar - A routine to transmit a single character out the serial port
-	 * \return		void
-	 * \param[in]	ch - uint8_t the character to transmit
-	 * \author		andreichichak
-	 * \date		Oct 16, 2015
-	 * \details		This routine assumes that we will be using UART2. A timeout value of 1ms (4th parameter)
-	 * 				gives a retry if the transmit buffer is full when back to back characters are transmitted,
-	 * 				avoiding dropping characters.
-	 */
+PUTCHAR_PROTOTYPE
+{
+  /* Place your implementation of fputc here */
+  /* e.g. write a character to the EVAL_COM1 and Loop until the end of transmission */
+  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
 
-	HAL_UART_Transmit_IT(&huart1, &ch, 1);
+  return ch;
 }
+
 
 
 /** System Clock Configuration
@@ -327,7 +422,7 @@ static void MX_USART3_UART_Init(void)
 {
 
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
+  huart3.Init.BaudRate = 460800; // SimpleMotion bus default
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
@@ -488,6 +583,7 @@ void assert_failed(uint8_t* file, uint32_t line)
   /* USER CODE END 6 */
 
 }
+
 
 #endif
 
