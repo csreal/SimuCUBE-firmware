@@ -47,7 +47,7 @@
 
 /* USER CODE BEGIN Includes */
 //#include "stdio.h"
-
+bool debugMode = true;
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -105,9 +105,16 @@ static void MX_I2C1_Init(void);
 #include "usb_device.h"
 #include "usbgamecontroller.h"
 
-//#include "cFFBDevice.h"
+#include "cFFBDevice.h"
 
+#include "Command.h"
+
+cFFBDevice gFFBDevice;
 USBGameController joystick;
+
+enum SystemStatus {BeforeInit, DriveInit, DriveConnectionError, DriveWaitClearfaults, DriveWaitReady, DriveFWUnsupported, Operational };
+volatile SystemStatus currentSystemStatus=BeforeInit;
+
 
 extern "C" {
 uint8_t gamecontroller_callback_wrapper(uint8_t *report) {
@@ -117,9 +124,43 @@ uint8_t gamecontroller_callback_wrapper(uint8_t *report) {
 /* USER CODE END 0 */
 
 
-
-
 bool SMSerialMasterIsMe=true;
+
+
+
+void SMPortSetMaster(bool me)
+{
+	GPIO_InitTypeDef pin;
+
+	//TX
+	pin.Pin = GPIO_PIN_10;
+	pin.Speed=GPIO_SPEED_FREQ_LOW;
+	pin.Pull=GPIO_NOPULL;
+	pin.Alternate=7;//USART3
+	if(me)
+		pin.Mode=GPIO_MODE_AF_PP;
+	else
+		pin.Mode=GPIO_MODE_INPUT;
+	HAL_GPIO_Init(GPIOB,&pin);
+
+	//TXEN
+	pin.Pin=GPIO_PIN_8;
+	if(me)
+		pin.Mode=GPIO_MODE_OUTPUT_PP;
+	else
+		pin.Mode=GPIO_MODE_INPUT;
+	HAL_GPIO_Init(GPIOD,&pin);
+
+	SMSerialMasterIsMe=me;
+}
+
+
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 int SMPortWrite(const char *data, int len)
 {
@@ -163,8 +204,9 @@ int SMPortReadByte( char *byte )
 	*/
 
 	//if we are not in control of SM bus, return
-	if(SMSerialMasterIsMe==false)
+	if(SMSerialMasterIsMe==false) {
 		return 0;
+	}
 
 	// try to read one byte with 200ms timout
 	HAL_StatusTypeDef status = HAL_UART_Receive(&huart3, (uint8_t *)byte, 1, 200);
@@ -189,9 +231,151 @@ int SMPortReadByte( char *byte )
 	//timeouted
 	//return 0;
 }
+#ifdef __cplusplus
+}
+#endif
+
+//call this when system status changes. TODO implement some way of telling user about the status
+void broadcastSystemStatus(SystemStatus status, bool stopHere=false)
+{
+	currentSystemStatus=status;
+
+	//now on errors, just do dummy infinte loop with led blinking
+	//FIXME replace with this some way to tell user thru USB too
+	if(stopHere)
+	{
+		SMPortSetMaster(false);//release control of SM bus to allow Granity connection
+
+		while(1)
+		{
+			HAL_Delay(100);//100ms delay
+		}
+	}
+}
 
 
+// search index pulse. Encoder is at 0 on startup.
+bool WaitForIndexPulse( int &indexPos )
+{
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_SYSTEM_CONTROL, 2048);
 
+	bool found=false;
+	do
+	{
+		smint32 enc, status;
+		smRead2Parameters(gFFBDevice.mSMBusHandle, 1, SMP_DEBUGPARAM1, &enc, SMP_DEBUGPARAM2, &status);
+		if(status==200)
+		{
+			found=true;
+			indexPos=enc;
+			return true;
+		}
+	} while(found==false);
+
+	return false;
+}
+
+bool InitializeDrive()
+{
+	printf("1\r\n");
+	gFFBDevice.mSMBusHandle = smOpenBus("MBEDSERIAL");
+	//SMSerial.baud(460800);
+	MX_USART3_UART_Init(); // inits to default 460800
+
+
+	smSetTimeout(200);
+
+	broadcastSystemStatus(DriveInit);
+
+	//clear sm bus error from previous session. hope not need it
+	smint32 dummy;
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &dummy);
+	resetCumulativeStatus(gFFBDevice.mSMBusHandle);
+
+
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 0);
+	//read some ioni drive parameters
+	smint32 driveStatus=-1, initialPosition=-1, homingConfigurationBits, driveFWversion=-1, encoderResolution=-1;
+	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_FIRMWARE_VERSION, &driveFWversion);
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+
+	//todo change these when cFFBDevice port is complete
+	//smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);//read encoder resolution from ioni.
+	//gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*=4;//PPR to CPR
+
+	//switch leds off
+	//defines work like this: #define LED4_OUT_Pin GPIO_PIN_12 #define LED4_OUT_GPIO_Port GPIOD
+	HAL_GPIO_WritePin(LED1_CLIPPING_OUT_GPIO_Port, LED1_CLIPPING_OUT_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED2_OUT_GPIO_Port, LED2_OUT_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED3_OUT_GPIO_Port, LED3_OUT_Pin, GPIO_PIN_RESET);
+
+	//led4=led5=led6=0;
+
+	//comm error
+	if(getCumulativeStatus(gFFBDevice.mSMBusHandle)!=SM_OK)
+		broadcastSystemStatus(DriveConnectionError,true);
+	if(driveFWversion<1100)//V1092 would be enough, but it has bug in SMP_FAULT_BEHAVIOR which is fixed in the next version
+		broadcastSystemStatus(DriveFWUnsupported, true);
+
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULTS,0);//reset prev communication fault & others
+
+	//disable enable drive watchdog: if communication is lost for over 1sec or has error, drive will go fault state
+	if(debugMode)
+		smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1|(100<<8));
+
+	//if drive is in fault state, wait that user resets the faults with STO input
+	while(driveStatus&STAT_FAULTSTOP )
+	{
+		broadcastSystemStatus(DriveWaitClearfaults);
+		smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+		HAL_Delay(500);//wait(0.5);
+	}
+
+	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+	//wait drive to initialize (wait for phasing & homing if configured)
+	while(!(driveStatus&STAT_SERVO_READY) )
+	{
+			broadcastSystemStatus(DriveWaitReady);
+			smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+			HAL_Delay(500);//wait(0.5);
+	}
+
+
+	// this is the code for centering after phasing.
+	// for now, start the system when wheel is at center!
+	/*
+	int indexPos=0;
+	if(!WaitForIndexPulse(indexPos)) {
+		broadcastSystemStatus(IndexPointNotFound, false);
+	}
+	*/
+
+	//read position counter
+	volatile int p1,p2;
+	smint32 positionFB=0;
+	p1=SetTorque(0);//call this twice to have 16 bit differential encoder unwrapper initialized
+	p2=SetTorque(0);
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ACTUAL_POSITION_FB, &positionFB);//read 32 bit position
+
+	// TODO at this time, the steering wheel should be driven too center
+	// defined by encoderOffsetValue variable
+	// and only after that resetPositionCountAt should be called.
+	resetPositionCountAt(positionFB);
+
+	//enable drive watchdog: if communication is lost for over 0.3sec or has error, drive will go fault state
+	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1 | (30<<8));
+
+	//smSetTimeout(50);
+	//smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_BUS_SPEED,1000000);
+	//smSetTimeout(200);
+	//SMSerial.baud(1000000);
+
+
+	broadcastSystemStatus(Operational, false);
+
+
+	return true;
+}
 
 
 
@@ -219,9 +403,9 @@ int main(void)
   MX_USB_DEVICE_Init();
 
   /* USER CODE BEGIN 2 */
-//  setvbuf(stdin, NULL, _IONBF, 0);
-//  setvbuf(stdout, NULL, _IONBF, 0);
-//  setvbuf(stderr, NULL, _IONBF, 0);
+
+  InitializeDrive();
+  broadcastSystemStatus(Operational, false);
 
 
 
@@ -234,6 +418,7 @@ int main(void)
   int32_t angle = 0;
   uint32_t button = 0;
   int8_t hat = 0;
+  float steeringAngle = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -258,8 +443,10 @@ int main(void)
       x=6000;
       y=0;
 #endif
+      s32 encoderCounter=0;
+      gFFBDevice.CalcTorqueCommand(&encoderCounter); //reads encoder counter too
       joystick.update(throttle, throttle,throttle,rudder, x, y, button, hat);
-
+      if(debugMode)printf("encoder %u\r\n", encoderCounter);
       if(joystick.getPendingReceivedReportCount())
       {
       	HID_REPORT recv_report=joystick.getReceivedReport();
@@ -269,8 +456,8 @@ int main(void)
       HAL_Delay(1);//wait(0.001*CONTROL_PERIOD_MS);
 
       // here's how you print:
-      int i = 666;
-      printf("test %d string\r\n", i);	// works!
+      //int i = 666;
+      //printf("test %d string\r\n", i);	// works!
       //wait(0.001);
 
 

@@ -1,4 +1,4 @@
-#include "mbed.h"
+//#include "mbed.h"
 #include "cFFBDevice.h"
 
 //---------------------------------------------------------------------------------------------
@@ -7,6 +7,8 @@ void InitializeTorqueCommand()
 {
 }
 
+
+extern cFFBDevice gFFBDevice;
 
 s32 encoderPos32=0;
 u16 prevEncoderPos=0;

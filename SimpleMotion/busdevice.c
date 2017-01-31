@@ -10,6 +10,8 @@
 //how much bytes available in transmit buffer
 #define TANSMIT_BUFFER_LENGTH 128
 
+
+
 typedef struct _SMBusDevice
 {
 	//common

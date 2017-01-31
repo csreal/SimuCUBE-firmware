@@ -9,7 +9,8 @@
 #define CFFBDEVICE_H_
 
 #include "types.h"
-#include "cDeviceConfig.h"
+//#include "cDeviceConfig.h"
+#include "../SimpleMotion/simplemotion.h"
 
 class cFFBDevice {
 public:
@@ -20,7 +21,7 @@ public:
 
 	s32 CalcTorqueCommand(s32 *readEncoderPos);
 
-	cDeviceConfig mConfig;
+	//cDeviceConfig mConfig;
 
 	b8 mAutoCenter;
 	smbus mSMBusHandle;
