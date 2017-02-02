@@ -39,4 +39,20 @@ ion_rom.bin
 *.hex
 *.bin
 
-Debug/*
+Debug/*.hex
+Debug/*.elf
+Debug/*.map
+Debug/SimpleMotion/*.o
+Debug/SimpleMotion/*.d
+Debug/src/*.o
+Debug/src/*.d
+Debug/system/src/cmsis/*.o
+Debug/system/src/cmsis/*.d
+Debug/system/src/cortexm/*.o
+Debug/system/src/cortexm/*.d
+Debug/system/src/diag/*.o
+Debug/system/src/diag/*.d
+Debug/system/src/newlib/*.o
+Debug/system/src/newlib/*.d
+Debug/system/src/stm32f4-hal/*.o
+Debug/system/src/stm32f4-hal/*.d
