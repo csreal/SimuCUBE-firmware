@@ -7,10 +7,11 @@
 
 #include "cFFBDevice.h"
 #include "ffb.h"
+#include "command.h"
 
 cFFBDevice::cFFBDevice() {
 	// TODO Auto-generated constructor stub
-
+	SetDefault();
 }
 
 cFFBDevice::~cFFBDevice() {
@@ -18,7 +19,7 @@ cFFBDevice::~cFFBDevice() {
 }
 
 void cFFBDevice::SetDefault()	{
-	//mConfig.SetDefault();
+	mConfig.SetDefault();
 }
 
 s32 cFFBDevice::CalcTorqueCommand(s32 *readEncoderPos) {
@@ -71,7 +72,7 @@ s32 cFFBDevice::CalcTorqueCommand(s32 *readEncoderPos) {
 		}
 		command = (command*mConfig.profileConfig.mMainGain) >> 14;
 	}
-	if (gFFBDevice.mAutoCenter)
+	if (mAutoCenter)//gFFBDevice.mAutoCenter)
 	{
 		command += SpringEffect(-pos, mConfig.hardwareConfig.mDesktopSpringGain);
 		cumul_damper += mConfig.hardwareConfig.mDesktopDamperGain;
@@ -89,3 +90,15 @@ s32 cFFBDevice::CalcTorqueCommand(s32 *readEncoderPos) {
 	*readEncoderPos=pos;
 	return (command);
 }
+
+s32 cFFBDevice::ConstrainEffect(s32 val)
+{
+	return (constrain(val, -MAX_NORM_TORQUE, MAX_NORM_TORQUE));
+}
+
+s32 cFFBDevice::SpringEffect(s32 err, s32 mag)
+{
+	return ((err*mag) >>1);
+}
+
+

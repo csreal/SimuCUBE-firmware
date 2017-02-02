@@ -8,6 +8,10 @@
 #ifndef CDEVICECONFIG_H_
 #define CDEVICECONFIG_H_
 
+#include "cHardwareConfig.h"
+#include "cProfileConfig.h"
+#include <cstring>
+
 class cDeviceConfig {
 public:
 	cDeviceConfig();
@@ -18,14 +22,16 @@ public:
 	cHardwareConfig hardwareConfig;
 	cProfileConfig profileConfig;
 
-	int *GetProfileConfigAddr();
-	int *GetHardwareConfigAddr();
+	int * GetProfileConfigAddr();
+	int * GetHardwareConfigAddr();
 
 
 	void getProfile(int *conf);
 	void setProfile(int *conf);
 	void getHardware(int *conf);
 	void setHardware(int *conf);
+private:
+
 
 };
 

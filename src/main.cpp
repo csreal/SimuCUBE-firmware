@@ -164,7 +164,7 @@ extern "C" {
 
 int SMPortWrite(const char *data, int len)
 {
-	int i;
+	//int i;
 
 	//if we are not in control of SM bus, return
 	if(SMSerialMasterIsMe==false)
@@ -183,6 +183,7 @@ int SMPortWrite(const char *data, int len)
 	//	SMSerial.putc(data[i]);
 	HAL_UART_Transmit(&huart3, (uint8_t *)data, len, 0xFFFF);
 	//wait(43e-6);//keep TXEN up for last 2 bytes because putc returns before data is physically out
+	// not sure if HAL_transmit does it but lets wait anyway...
 	delay_us(43);
 
 	//SMSerialTXEN=0;
@@ -300,8 +301,8 @@ bool InitializeDrive()
 	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
 
 	//todo change these when cFFBDevice port is complete
-	//smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);//read encoder resolution from ioni.
-	//gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*=4;//PPR to CPR
+	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);//read encoder resolution from ioni.
+	gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*=4;//PPR to CPR
 
 	//switch leds off
 	//defines work like this: #define LED4_OUT_Pin GPIO_PIN_12 #define LED4_OUT_GPIO_Port GPIOD
@@ -404,49 +405,58 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
-  InitializeDrive();
+  if(!InitializeDrive()) {
+	  //handle error here.
+  }
   broadcastSystemStatus(Operational, false);
 
 
 
-  int32_t i = 0;
-  int16_t throttle = 0;
-  int16_t rudder = 0;
-  int16_t x = 0;
-  int16_t y = 0;
-  int32_t radius = 120;
-  int32_t angle = 0;
-  uint32_t button = 0;
+  // unsigned 16-bit for these, as joystick API needs it.
+  // calculated internally with more accuracy when reading/scaling.
+  uint16_t throttle = 0;
+  uint16_t rudder = 0;
+  uint16_t clutch = 0;
+  uint16_t brake = 0;
   int8_t hat = 0;
-  float steeringAngle = 0;
+  uint16_t y = 0;
+  uint32_t buttons = 0;
+
+  float steeringAngle = 0.0;
+
+  // init min and max steering angles based on user profile.
+  float minSteeringAngle = (-1)*gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+  float maxSteeringAngle = gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
   while (1) {
-#if 0
-      // Basic Joystick
-	  throttle = i*100 ;
-      //throttle = (i >> 8) & 0xFF; // value -127 .. 128
-      rudder = (i >> 8) & 0xFF;   // value -127 .. 128
-      //button = (i >> 8) & 0x0F;   // value    0 .. 15, one bit per button
-      button=i;
-//        hat    = (i >> 8) & 0x03;   // value 0, 1, 2, 3 or 4 for neutral
-      hat    = (i >> 8) & 0x07;   // value 0..7 or 8 for neutral
-      i++;
-
-      //x = cos((double)angle*3.14/180.0)*radius;  // value -127 .. 128
-      //y = sin((double)angle*3.14/180.0)*radius;  // value -127 .. 128
-      angle += 3;
-
-      x=6000;
-      y=0;
-#endif
       s32 encoderCounter=0;
       gFFBDevice.CalcTorqueCommand(&encoderCounter); //reads encoder counter too
-      joystick.update(throttle, throttle,throttle,rudder, x, y, button, hat);
-      if(debugMode)printf("encoder %u\r\n", encoderCounter);
+	    steeringAngle = (float)encoderCounter/(float)gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*360.0;
+	    if(steeringAngle < minSteeringAngle) {
+	    	steeringAngle = minSteeringAngle;
+	    	// todo: endstop effect here!
+	    } else if (steeringAngle > maxSteeringAngle ) {
+	    	steeringAngle = maxSteeringAngle;
+	    	// todo: endstop effect here!
+	    }
+
+
+      //directly to int
+      int16_t steering = (int16_t)(steeringAngle/maxSteeringAngle*32768.0);// + 0.5);
+      if(debugMode)printf("raw encoder: %d ", encoderCounter);
+      if(debugMode)printf("direct scaled angle: %d", steering);
+      uint16_t steeringScaled = 0x7fff - steering;
+      if(debugMode)printf("raw joyval with offset: %u ", steeringScaled);
+
+
+      joystick.update(brake, clutch,throttle,rudder, steeringScaled, y, buttons, hat);
+
+      if(debugMode)printf("angle %f \r\n", steeringAngle);
+
       if(joystick.getPendingReceivedReportCount())
       {
       	HID_REPORT recv_report=joystick.getReceivedReport();
@@ -455,9 +465,6 @@ int main(void)
       // HAL_Delay = milliseconds
       HAL_Delay(1);//wait(0.001*CONTROL_PERIOD_MS);
 
-      // here's how you print:
-      //int i = 666;
-      //printf("test %d string\r\n", i);	// works!
       //wait(0.001);
 
 

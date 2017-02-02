@@ -5,7 +5,7 @@
  *      Author: Mika
  */
 
-#include "cDeviceConfig.h"
+#include <cDeviceConfig.h>
 
 cDeviceConfig::cDeviceConfig() {
 	// TODO Auto-generated constructor stub
@@ -16,13 +16,15 @@ cDeviceConfig::~cDeviceConfig() {
 	// TODO Auto-generated destructor stub
 }
 
-void cDeviceConfig::SetDefault() { };
+void cDeviceConfig::SetDefault() {
 
-int *cDeviceConfig::GetProfileConfigAddr() {
+}
+
+int * cDeviceConfig::GetProfileConfigAddr() {
 	return ((int*)&profileConfig.mMaxAngle);
 }
 
-int *cDeviceConfig::GetHardwareConfigAddr() {
+int * cDeviceConfig::GetHardwareConfigAddr() {
 	return ((int*)&hardwareConfig.mEncoderOffset);
 }
 
@@ -32,15 +34,15 @@ void cDeviceConfig::getProfile(int *conf) {
 }
 
 void cDeviceConfig::setProfile(int *conf) {
-	myMemCpy(conf, GetProfileConfigAddr(), sizeof(cProfileConfig));
+	memcpy(conf, GetProfileConfigAddr(), sizeof(cProfileConfig));
 }
 
 void cDeviceConfig::getHardware(int *conf) {
-	myMemCpy(GetHardwareConfigAddr(), conf, sizeof(cHardwareConfig));
+	memcpy(GetHardwareConfigAddr(), conf, sizeof(cHardwareConfig));
 }
 
 void cDeviceConfig::setHardware(int *conf) {
-	myMemCpy(conf, GetHardwareConfigAddr(), sizeof(cHardwareConfig));
+	memcpy(conf, GetHardwareConfigAddr(), sizeof(cHardwareConfig));
 }
 
 
