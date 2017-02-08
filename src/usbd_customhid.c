@@ -376,6 +376,7 @@ static uint8_t  USBD_CUSTOM_HID_DeInit (USBD_HandleTypeDef *pdev,
   */
 
 volatile int temp_debug;
+volatile int temp_debug2;
 
 static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev, 
                                 USBD_SetupReqTypedef *req)
@@ -501,7 +502,9 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
     }
     default:
     	temp_debug = req->bRequest;
-    	// bootissa tulee 0x06 joka on vanhassa firmiksessä STANDARD->GET_DESCRIPTION
+    	temp_debug2 = req->bmRequest;
+    	// on startup req->bRequest shows 0x06 which is STANDARD->GET_DESCRIPTOR in the old firmware
+    	// and then it shows 0x01 which is..?
     	asm("nop");
     	break;
   }
