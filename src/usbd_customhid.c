@@ -375,7 +375,7 @@ static uint8_t  USBD_CUSTOM_HID_DeInit (USBD_HandleTypeDef *pdev,
   * @retval status
   */
 
-volatile int temppidebuggi;
+volatile int temp_debug;
 
 static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev, 
                                 USBD_SetupReqTypedef *req)
@@ -455,11 +455,12 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 //#endif
 
     default:
-      temppidebuggi = req->bRequest;
-      // tänne tullaan iracingin latausdialogissa ennen fullscreeniä. bRequest = 0x01;
-      // kesken fullscreen latauksen iracing kaatuu. bRequest  = 0x01;
-      // vanhassa firmiksessä se on REQUEST_INTERFACE->HID_GET_REPORT.
-      // tässä firmiksessä vastaava define on CUSTOM_HID_REQ_GET_REPORT
+    	temp_debug = req->bRequest;
+      // this got triggered in the iR loading dialog before fullscreen. bRequest = 0x01;
+      // in the middle of fullscreen loading iR crashes. bRequest  = 0x01;
+      // in the old usb stack that was REQUEST_INTERFACE->HID_GET_REPORT.
+      // in this new stack it is CUSTOM_HID_REQ_GET_REPORT
+      //
       asm("nop");
 
       USBD_CtlError (pdev, req);
@@ -499,7 +500,7 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
       break;
     }
     default:
-    	temppidebuggi = req->bRequest;
+    	temp_debug = req->bRequest;
     	// bootissa tulee 0x06 joka on vanhassa firmiksessä STANDARD->GET_DESCRIPTION
     	asm("nop");
     	break;
