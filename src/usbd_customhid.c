@@ -374,12 +374,17 @@ static uint8_t  USBD_CUSTOM_HID_DeInit (USBD_HandleTypeDef *pdev,
   * @param  req: usb requests
   * @retval status
   */
+
+volatile int temppidebuggi;
+
 static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev, 
                                 USBD_SetupReqTypedef *req)
 {
   uint16_t len = 0;
   uint8_t  *pbuf = NULL;
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
+  int r = 0;
+  uint8_t report_id;
 
   switch (req->bmRequest & USB_REQ_TYPE_MASK)
   {
@@ -413,7 +418,50 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
       USBD_CtlPrepareRx (pdev, hhid->Report_buf, (uint8_t)(req->wLength));
       
       break;
+
+    // new, added case for CUSTOM_HID_REQ_GET_REPORT
+    case CUSTOM_HID_REQ_GET_REPORT:
+    	r = req->bmRequest;
+    	report_id = (req->wValue) & 0xff;
+//#if 0
+		if (report_id == 6)// && (gNewEffectBlockLoad.reportId==6))
+		{
+			USBD_CtlSendData(pdev,(uint8_t *)&mSetReportAnswer,sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
+			mSetReportAnswer.reportId = 0;
+			return USBD_OK;
+			/*
+			USB_SendControl(0,(uint8_t *)&mSetReportAnswer,sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
+			mSetReportAnswer.reportId = 0;
+			return (true);
+			*/
+		}
+		if (report_id == 7)
+		{
+			mGetReportAnswer.reportId = report_id;
+			mGetReportAnswer.ramPoolSize = 0xffff;
+			mGetReportAnswer.maxSimultaneousEffects = MAX_EFFECTS;
+			mGetReportAnswer.memoryManagement = 3;
+			USBD_CtlSendData(pdev,(uint8_t *)&mGetReportAnswer,sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
+			return USBD_OK;
+			/*
+			mSetReportAnswer.reportId = report_id;
+			mSetReportAnswer.ramPoolSize = 0xffff;
+			mSetReportAnswer.maxSimultaneousEffects = MAX_EFFECTS;
+			mSetReportAnswer.memoryManagement = 3;
+			USB_SendControl(0,(uint8_t *)&mSetReportAnswer,sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
+			return (true);
+			*/
+		}
+//#endif
+
     default:
+      temppidebuggi = req->bRequest;
+      // tänne tullaan iracingin latausdialogissa ennen fullscreeniä. bRequest = 0x01;
+      // kesken fullscreen latauksen iracing kaatuu. bRequest  = 0x01;
+      // vanhassa firmiksessä se on REQUEST_INTERFACE->HID_GET_REPORT.
+      // tässä firmiksessä vastaava define on CUSTOM_HID_REQ_GET_REPORT
+      asm("nop");
+
       USBD_CtlError (pdev, req);
       return USBD_FAIL; 
     }
@@ -450,6 +498,11 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
       hhid->AltSetting = (uint8_t)(req->wValue);
       break;
     }
+    default:
+    	temppidebuggi = req->bRequest;
+    	// bootissa tulee 0x06 joka on vanhassa firmiksessä STANDARD->GET_DESCRIPTION
+    	asm("nop");
+    	break;
   }
   return USBD_OK;
 }

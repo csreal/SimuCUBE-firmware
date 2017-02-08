@@ -248,6 +248,7 @@ uint8_t FfbDebugListEffects(uint8_t *index);
 #define MEffectState_Allocated		0x01
 #define MEffectState_Playing		0x02
 
+#ifdef __cplusplus
 class cEffectState
 {
 public:
@@ -273,5 +274,6 @@ public:
 };
 
 extern volatile cEffectState gEffectStates[MAX_EFFECTS + 1];	// one for each effect (array index 0 is unused to simplify things)
+#endif
 
 #endif // _FFB_PRO_

@@ -204,18 +204,6 @@ extern const volatile BLHeader VSDR_BL_Header __attribute__((section(".firmware_
 #endif
 
 
-//SM payload command structure
-typedef struct {
-	/* ID=0 param size 30 bits (cmd total 4 bytes)
-	 * ID=1 param size 22 bits (cmd total 3 bytes)
-	 * ID=2 set parameter store address, param: 14 bits=register address  (cmd total 2 bytes)
-	 * ID=3 reserved
-	 */
-	u8 ID :2;
-	s32 param :30;
-	bool discardRetData; //if true, return data will not be inserted in ret queue
-} __attribute__ ((packed)) SMPayloadCommandForQueue;
-
 
 typedef struct {
 	/* ID=0 param size 30 bits (cmd total 4 bytes)

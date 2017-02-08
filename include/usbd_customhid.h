@@ -28,6 +28,10 @@
 /* Define to prevent recursive inclusion -------------------------------------*/ 
 #ifndef __USB_CUSTOMHID_H
 #define __USB_CUSTOMHID_H
+#include "ffb.h"
+
+USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnswer;
+USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnswer;
 
 #ifdef __cplusplus
  extern "C" {
@@ -36,6 +40,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include  "usbd_ioreq.h"
 #include "usbd_conf.h"
+
+
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
   * @{
@@ -109,7 +115,8 @@ USBD_CUSTOM_HID_HandleTypeDef;
   * @}
   */ 
 
-
+//USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnwser;
+//USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnwser;
 
 /** @defgroup USBD_CORE_Exported_Macros
   * @{
