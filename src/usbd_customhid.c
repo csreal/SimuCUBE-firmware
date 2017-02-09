@@ -503,8 +503,14 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
     default:
     	temp_debug = req->bRequest;
     	temp_debug2 = req->bmRequest;
-    	// on startup req->bRequest shows 0x06 which is STANDARD->GET_DESCRIPTOR in the old firmware
+
+    	// on startup req->bRequest shows 0x06 and req->bmRequest is 129  and wValue is 8704 which is STANDARD->GET_DESCRIPTOR in the old firmware
+
+
     	// and then it shows 0x01 which is..?
+
+
+
     	asm("nop");
     	break;
   }
