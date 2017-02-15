@@ -427,6 +427,15 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 //#if 0
 		if (report_id == 6)// && (gNewEffectBlockLoad.reportId==6))
 		{
+			/*
+			here, the original code went to usbcallback_requestcompleted
+			BEFORE triggering this.
+
+			todo: do the same things here as the original. Call to
+			ffb functions to set right mSetReportAnswer.
+			 */
+
+
 			USBD_CtlSendData(pdev,(uint8_t *)&mSetReportAnswer,sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
 			mSetReportAnswer.reportId = 0;
 			return USBD_OK;
