@@ -103,9 +103,12 @@ static void MX_I2C1_Init(void);
 
 #include "usbgamecontroller.h"
 #include "usb_device.h"
+#include "usbd_customhid.h"
 
 
 #include "cFFBDevice.h"
+
+#include "ffb.h"
 
 #include "Command.h"
 
@@ -119,6 +122,12 @@ volatile SystemStatus currentSystemStatus=BeforeInit;
 extern "C" {
 uint8_t gamecontroller_callback_wrapper(uint8_t *report) {
 	return joystick.EPINT_OUT_callback(report);
+}
+
+void FfbOnCreateNewEffect_wrapper() {
+	USBD_HandleTypeDef *pdev  = &hUsbDeviceFS;
+	USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
+	FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t *)hhid->Report_buf, joystick.get_mSetReportAnswer());
 }
 }
 /* USER CODE END 0 */

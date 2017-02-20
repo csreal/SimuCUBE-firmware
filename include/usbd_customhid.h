@@ -30,8 +30,8 @@
 #define __USB_CUSTOMHID_H
 #include "ffb.h"
 
-USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnswer;
-USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnswer;
+//USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnswer;
+//USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnswer;
 
 #ifdef __cplusplus
  extern "C" {

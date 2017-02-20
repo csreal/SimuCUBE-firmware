@@ -52,6 +52,14 @@
 #include "ffb.h"
 
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+#include "USBGameController.h"
+extern USBGameController joystick;
+#ifdef __cplusplus
+ }
+#endif
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
   * @{
@@ -70,7 +78,7 @@
   * @}
   */ 
 
-
+#if 0
 void FfbOnCreateNewEffect (USB_FFBReport_CreateNewEffect_Feature_Data_t* inData, USB_FFBReport_PIDBlockLoad_Feature_Data_t *outData)
 {
 	outData->reportId = 6;
@@ -96,7 +104,7 @@ void FfbOnCreateNewEffect (USB_FFBReport_CreateNewEffect_Feature_Data_t* inData,
 	outData->ramPoolAvailable = 0xFFFF;	// =0 or 0xFFFF - don't really know what this is used for?
 //	WaitMs(5);
 }
-
+#endif
 
 
 /** @defgroup USBD_CUSTOM_HID_Private_Defines
@@ -460,11 +468,14 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 
       USB_FFBReport_PIDBlockLoad_Feature_Data_t outdata;
 	  //FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t *)hhid->Report_buf, &mSetReportAnwser);
+      FfbOnCreateNewEffect_wrapper();
+#if 0
+      //bruteforce
       mSetReportAnswer.reportId=6;
       mSetReportAnswer.effectBlockIndex=1;
       mSetReportAnswer.loadStatus=1;
       mSetReportAnswer.ramPoolAvailable=0xFFFF;
-
+#endif
       
       break;
 

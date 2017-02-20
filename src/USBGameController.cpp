@@ -268,3 +268,11 @@ HID_REPORT USBGameController::getReceivedReport()
 	 return receivedReports[takeFrom];
 }
 
+
+USB_FFBReport_PIDPool_Feature_Data_t* USBGameController::get_mGetReportAnswer() {
+	return &mGetReportAnswer;
+}
+USB_FFBReport_PIDBlockLoad_Feature_Data_t* USBGameController::get_mSetReportAnswer() {
+	return &mSetReportAnswer;
+}
+

@@ -118,7 +118,7 @@
 #define TRANSFER_RELEASE	0x40
 #define TRANSFER_ZERO		0x20
 
-extern testimuuttuja;
+//extern testimuuttuja;
 //extern uint8_t gamecontroller_callback_wrapper(uint8_t *report);
 //extern gamecontroller_callback_wrapper(uint8_t*);
 
@@ -902,7 +902,6 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t *eventpointer)
 	//joystick.EPINT_OUT_callback(eventpointer);
 	printf("outevent. going to usbgamecontroller_epintout_wrappers\r\n");
 	return gamecontroller_callback_wrapper(eventpointer);
-	testimuuttuja = 5;
 	return (0);
   	/* USER CODE END 6 */
 }

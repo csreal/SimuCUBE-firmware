@@ -14,8 +14,7 @@
 #include "ffb.h"
 #include "USBHID_Types.h"
 
-//typedef uint8_t (* EPOUTCALLBACK)(uint8_t* report);
-
+#if 0
  typedef struct {
      struct {
          uint8_t dataTransferDirection;
@@ -36,7 +35,7 @@
      bool zlp;
      bool notify;
  } CONTROL_TRANSFER;
-
+#endif
 
 
 #define REPORT_ID_JOYSTICK  4
@@ -361,6 +360,9 @@ class USBGameController {
 	//u32 USB_SendControl (u8 flags, const u8 *d, u32 len);
 	//u32 USB_RecvControl (u8 *d, u32 len);
 
+        USB_FFBReport_PIDPool_Feature_Data_t* get_mGetReportAnswer();
+		USB_FFBReport_PIDBlockLoad_Feature_Data_t* get_mSetReportAnswer();
+
      private:
          bool FFBEnabled;
          int16_t Throttle;
@@ -378,8 +380,8 @@ class USBGameController {
          unsigned int receivedReportBufferHead, receivedReportBufferTail;//head is index where new arrived report is stored, tail is the index where is last unhandled report
 		 HID_REPORT receivedReports[RX_REPORT_BUFFER_COUNT];
 
-		 USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnwser;
-		 USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnwser;
+		 USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnswer;
+		 USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnswer;
 	
          void _init();
 };
