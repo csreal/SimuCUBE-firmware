@@ -16,6 +16,29 @@
 
 //typedef uint8_t (* EPOUTCALLBACK)(uint8_t* report);
 
+ typedef struct {
+     struct {
+         uint8_t dataTransferDirection;
+         uint8_t Type;
+         uint8_t Recipient;
+     } bmRequestType;
+     uint8_t  bRequest;
+     uint16_t wValue;
+     uint16_t wIndex;
+     uint16_t wLength;
+ } SETUP_PACKET;
+
+ typedef struct {
+     SETUP_PACKET setup;
+     uint8_t *ptr;
+     uint32_t remaining;
+     uint8_t direction;
+     bool zlp;
+     bool notify;
+ } CONTROL_TRANSFER;
+
+
+
 #define REPORT_ID_JOYSTICK  4
 
 // bmRequestType

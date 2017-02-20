@@ -900,6 +900,7 @@ static int8_t CUSTOM_HID_OutEvent_FS(uint8_t *eventpointer)
 { 
 	/* USER CODE BEGIN 6 */
 	//joystick.EPINT_OUT_callback(eventpointer);
+	printf("outevent. going to usbgamecontroller_epintout_wrappers\r\n");
 	return gamecontroller_callback_wrapper(eventpointer);
 	testimuuttuja = 5;
 	return (0);

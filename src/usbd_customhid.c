@@ -49,6 +49,8 @@
 #include "usbd_customhid.h"
 #include "usbd_desc.h"
 #include "usbd_ctlreq.h"
+#include "ffb.h"
+
 
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
@@ -67,6 +69,34 @@
 /**
   * @}
   */ 
+
+
+void FfbOnCreateNewEffect (USB_FFBReport_CreateNewEffect_Feature_Data_t* inData, USB_FFBReport_PIDBlockLoad_Feature_Data_t *outData)
+{
+	outData->reportId = 6;
+	outData->effectBlockIndex = 1;// GetNextFreeEffect();
+
+	if (outData->effectBlockIndex == 0)
+	{
+		outData->loadStatus = 2;	// 1=Success,2=Full,3=Error
+		//LogText("Could not create effect");
+		printf("effectBlockIndex->full\r\n");
+	}
+	else
+	{
+		outData->loadStatus = 1;	// 1=Success,2=Full,3=Error
+		printf("going to create new effect\r\n");
+		CreateNewEffect(inData, outData->effectBlockIndex);
+
+//		LogText("Created effect ");
+//		LogBinary(&outData->effectBlockIndex,1);
+//		LogText(", type ");
+//		LogBinaryLf(&inData->effectType,1);
+	}
+	outData->ramPoolAvailable = 0xFFFF;	// =0 or 0xFFFF - don't really know what this is used for?
+//	WaitMs(5);
+}
+
 
 
 /** @defgroup USBD_CUSTOM_HID_Private_Defines
@@ -381,6 +411,7 @@ volatile int temp_debug2;
 static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev, 
                                 USBD_SetupReqTypedef *req)
 {
+	printf("customhid_setup\r\n");
   uint16_t len = 0;
   uint8_t  *pbuf = NULL;
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
@@ -390,38 +421,56 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
   switch (req->bmRequest & USB_REQ_TYPE_MASK)
   {
   case USB_REQ_TYPE_CLASS :  
+	  printf("req_type_class\r\n");
     switch (req->bRequest)
     {
       
       
     case CUSTOM_HID_REQ_SET_PROTOCOL:
       hhid->Protocol = (uint8_t)(req->wValue);
+      printf("hid_req_set_protocol\r\n");
       break;
       
     case CUSTOM_HID_REQ_GET_PROTOCOL:
+    	printf("hid_req_get_protocol\r\n");
       USBD_CtlSendData (pdev, 
                         (uint8_t *)&hhid->Protocol,
                         1);    
       break;
       
     case CUSTOM_HID_REQ_SET_IDLE:
+    	printf("hid_req_set_idle\r\n");
       hhid->IdleState = (uint8_t)(req->wValue >> 8);
       break;
       
     case CUSTOM_HID_REQ_GET_IDLE:
+    	printf("hid_req_get_idle\r\n");
       USBD_CtlSendData (pdev, 
                         (uint8_t *)&hhid->IdleState,
                         1);        
       break;      
     
     case CUSTOM_HID_REQ_SET_REPORT:
+    	printf("hid_req_set_report\r\n");
       hhid->IsReportAvailable = 1;
       USBD_CtlPrepareRx (pdev, hhid->Report_buf, (uint8_t)(req->wLength));
+
+
+      printf("going to createnewffect from hid_req_set_report!\r\n");
+
+      USB_FFBReport_PIDBlockLoad_Feature_Data_t outdata;
+	  //FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t *)hhid->Report_buf, &mSetReportAnwser);
+      mSetReportAnswer.reportId=6;
+      mSetReportAnswer.effectBlockIndex=1;
+      mSetReportAnswer.loadStatus=1;
+      mSetReportAnswer.ramPoolAvailable=0xFFFF;
+
       
       break;
 
     // new, added case for CUSTOM_HID_REQ_GET_REPORT
     case CUSTOM_HID_REQ_GET_REPORT:
+    	printf("hid_req_get_report\r\n");
     	r = req->bmRequest;
     	report_id = (req->wValue) & 0xff;
 //#if 0
@@ -435,6 +484,9 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 			ffb functions to set right mSetReportAnswer.
 			 */
 
+			printf("report_id=6\r\n");
+
+
 
 			USBD_CtlSendData(pdev,(uint8_t *)&mSetReportAnswer,sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
 			mSetReportAnswer.reportId = 0;
@@ -447,6 +499,7 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 		}
 		if (report_id == 7)
 		{
+			printf("report_id=7\r\n");
 			mGetReportAnswer.reportId = report_id;
 			mGetReportAnswer.ramPoolSize = 0xffff;
 			mGetReportAnswer.maxSimultaneousEffects = MAX_EFFECTS;
@@ -465,6 +518,7 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 //#endif
 
     default:
+    	printf("default_case\r\n");
     	temp_debug = req->bRequest;
       // this got triggered in the iR loading dialog before fullscreen. bRequest = 0x01;
       // in the middle of fullscreen loading iR crashes. bRequest  = 0x01;
@@ -479,16 +533,20 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
     break;
     
   case USB_REQ_TYPE_STANDARD:
+	  printf("req_type_standard\r\n");
     switch (req->bRequest)
     {
     case USB_REQ_GET_DESCRIPTOR: 
+    	printf(" req_type_getdescriptor\r\n");
       if( req->wValue >> 8 == CUSTOM_HID_REPORT_DESC)
       {
+    	  printf("custom_hid_report_desc!\r\n");
         len = MIN(USBD_CUSTOM_HID_REPORT_DESC_SIZE , req->wLength);
         pbuf =  ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->pReport;
       }
       else if( req->wValue >> 8 == CUSTOM_HID_DESCRIPTOR_TYPE)
       {
+    	  printf("other report?\r\n");
         pbuf = USBD_CUSTOM_HID_Desc;   
         len = MIN(USB_CUSTOM_HID_DESC_SIZ , req->wLength);
       }
@@ -500,16 +558,19 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
       break;
       
     case USB_REQ_GET_INTERFACE :
+    	printf("req_get_interface?\r\n");
       USBD_CtlSendData (pdev,
                         (uint8_t *)&hhid->AltSetting,
                         1);
       break;
       
     case USB_REQ_SET_INTERFACE :
+    	printf("req_set_interface?\r\n");
       hhid->AltSetting = (uint8_t)(req->wValue);
       break;
     }
     default:
+    	printf("default case\r\n");
     	temp_debug = req->bRequest;
     	temp_debug2 = req->bmRequest;
 
@@ -520,7 +581,7 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 
 
 
-    	asm("nop");
+    	asm("nop\r\n");
     	break;
   }
   return USBD_OK;
@@ -576,7 +637,7 @@ static uint8_t  *USBD_CUSTOM_HID_GetCfgDesc (uint16_t *length)
 static uint8_t  USBD_CUSTOM_HID_DataIn (USBD_HandleTypeDef *pdev, 
                               uint8_t epnum)
 {
-  
+  //printf("datainstage");
   /* Ensure that the FIFO is empty before a new transfer, this condition could 
   be caused by  a new transfer before the end of the previous transfer */
   ((USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassData)->state = CUSTOM_HID_IDLE;
@@ -594,7 +655,7 @@ static uint8_t  USBD_CUSTOM_HID_DataIn (USBD_HandleTypeDef *pdev,
 static uint8_t  USBD_CUSTOM_HID_DataOut (USBD_HandleTypeDef *pdev, 
                               uint8_t epnum)
 {
-  
+	printf("dataoutstage\r\n");
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;  
   
   ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(&hhid->Report_buf[0]);
@@ -614,7 +675,7 @@ static uint8_t  USBD_CUSTOM_HID_DataOut (USBD_HandleTypeDef *pdev,
 uint8_t USBD_CUSTOM_HID_EP0_RxReady(USBD_HandleTypeDef *pdev)
 {
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;  
-
+  printf("ep0_rxready\r\n");
   if (hhid->IsReportAvailable == 1)
   {
     ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(hhid->Report_buf);

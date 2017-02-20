@@ -239,12 +239,19 @@ uint8_t USBGameController::EPINT_OUT_callback( uint8_t *report)
 
     return returnval;
 #endif
+
+    /*
+    all events go here.
+
+    */
     //USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
     memcpy(receivedReports[receivedReportBufferHead].data, report, USBD_CUSTOMHID_OUTREPORT_BUF_SIZE); //hhid->Report_buf, USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
     receivedReportBufferHead=(receivedReportBufferHead+1)&(RX_REPORT_BUFFER_COUNT-1);
     asm("nop");
     bool returnval=true;
 
+
+    //printf("usbgamecontroller_epintoutcallback\r\n");
 	return returnval;
 }
 

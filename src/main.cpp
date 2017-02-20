@@ -101,9 +101,9 @@ static void MX_I2C1_Init(void);
 
 /* USER CODE BEGIN 0 */
 
-
-#include "usb_device.h"
 #include "usbgamecontroller.h"
+#include "usb_device.h"
+
 
 #include "cFFBDevice.h"
 
@@ -431,7 +431,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
+  debugMode=0;
   while (1) {
       s32 encoderCounter=0;
       gFFBDevice.CalcTorqueCommand(&encoderCounter); //reads encoder counter too
@@ -463,7 +463,7 @@ int main(void)
 	       	joystick.handleReceivedHIDReport(recv_report);
       }
       // HAL_Delay = milliseconds
-      HAL_Delay(1);//wait(0.001*CONTROL_PERIOD_MS);
+      HAL_Delay(100);//wait(0.001*CONTROL_PERIOD_MS);
 
       //wait(0.001);
 
