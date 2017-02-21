@@ -11,9 +11,10 @@
 #endif
 
 //#include "USBHID.h"
-#include "ffb.h"
+#include "FfbEngine.h"
 #include "USBHID_Types.h"
 #include "answer_filetypes.h"
+#include "cffbdevice.h"
 #if 0
  typedef struct {
      struct {
@@ -351,6 +352,7 @@ class USBGameController {
 		*/
 		//void USBCallback_requestCompleted(uint8_t * buf, uint32_t length);
 	
+        void FfbOnCreateNewEffect();
 	    bool handleReceivedHIDReport(HID_REPORT report);
 
         unsigned int getPendingReceivedReportCount();
@@ -364,6 +366,8 @@ class USBGameController {
 		USB_FFBReport_PIDBlockLoad_Feature_Data_t* get_mSetReportAnswer();
 		void set_mSetReportAnswerId(uint8_t reportid);
 		void set_mGetReportAnswer(uint8_t reportid);
+
+		cFFBDevice gFFBDevice;
 
      private:
          bool FFBEnabled;
@@ -385,7 +389,9 @@ class USBGameController {
 		 USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnswer;
 		 USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnswer;
 
-	
+
+		 FfbEngine FFB;
+
          void _init();
 };
 

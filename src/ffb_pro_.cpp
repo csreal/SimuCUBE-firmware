@@ -24,11 +24,10 @@
   this software.
 */
 
+#include <ffb_.h>
+#include <ffb_pro_.h>
 #include "stdint.h"
 #include "types.h"
-#include "ffb.h"
-#include "ffb_pro.h"
-//#include "debug.h"
 #include "USBGameController.h"
 
 //--------------------------------------------------------------------------------------------------

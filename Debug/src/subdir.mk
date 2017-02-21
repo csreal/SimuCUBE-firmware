@@ -19,24 +19,22 @@ C_SRCS += \
 
 CPP_SRCS += \
 ../src/Command.cpp \
+../src/FfbEngine.cpp \
 ../src/USBGameController.cpp \
 ../src/cDeviceConfig.cpp \
 ../src/cFFBDevice.cpp \
 ../src/cHardwareConfig.cpp \
 ../src/cProfileConfig.cpp \
-../src/ffb.cpp \
-../src/ffb_pro.cpp \
 ../src/main.cpp 
 
 OBJS += \
 ./src/Command.o \
+./src/FfbEngine.o \
 ./src/USBGameController.o \
 ./src/cDeviceConfig.o \
 ./src/cFFBDevice.o \
 ./src/cHardwareConfig.o \
 ./src/cProfileConfig.o \
-./src/ffb.o \
-./src/ffb_pro.o \
 ./src/main.o \
 ./src/stm32f4xx_hal_msp.o \
 ./src/stm32f4xx_it.o \
@@ -67,13 +65,12 @@ C_DEPS += \
 
 CPP_DEPS += \
 ./src/Command.d \
+./src/FfbEngine.d \
 ./src/USBGameController.d \
 ./src/cDeviceConfig.d \
 ./src/cFFBDevice.d \
 ./src/cHardwareConfig.d \
 ./src/cProfileConfig.d \
-./src/ffb.d \
-./src/ffb_pro.d \
 ./src/main.d 
 
 

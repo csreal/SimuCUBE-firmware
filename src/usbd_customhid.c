@@ -46,10 +46,10 @@
   */ 
 
 /* Includes ------------------------------------------------------------------*/
+//#include <ffbengine.h>
 #include "usbd_customhid.h"
 #include "usbd_desc.h"
 #include "usbd_ctlreq.h"
-#include "ffb.h"
 #include "answer_filetypes.h"
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
@@ -662,7 +662,7 @@ static uint8_t  USBD_CUSTOM_HID_DataIn (USBD_HandleTypeDef *pdev,
 static uint8_t  USBD_CUSTOM_HID_DataOut (USBD_HandleTypeDef *pdev, 
                               uint8_t epnum)
 {
-	printf("dataoutstage\r\n");
+  //printf("dataoutstage\r\n");
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;  
   
   ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(&hhid->Report_buf[0]);

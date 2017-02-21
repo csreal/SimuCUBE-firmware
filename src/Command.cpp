@@ -1,5 +1,6 @@
 //#include "mbed.h"
 #include "cFFBDevice.h"
+#include "USBGameController.h"
 
 //---------------------------------------------------------------------------------------------
 
@@ -8,7 +9,8 @@ void InitializeTorqueCommand()
 }
 
 
-extern cFFBDevice gFFBDevice;
+//extern cFFBDevice gFFBDevice;
+extern USBGameController joystick;
 
 s32 encoderPos32=0;
 u16 prevEncoderPos=0;
@@ -36,7 +38,7 @@ s32 SetTorque (s32 normalized_torque)		// between -0x10000 and 0x10000
 
 	u16 dummyVariable;
 
-	smFastUpdateCycle(gFFBDevice.mSMBusHandle, 1, targetTorq, 0, &encoderPos, &dummyVariable);
+	smFastUpdateCycle(joystick.gFFBDevice.mSMBusHandle, 1, targetTorq, 0, &encoderPos, &dummyVariable);
 
 	//calc encoder pos, unwrap it
 	encoderPos32+=s16(encoderPos-prevEncoderPos);

@@ -23,20 +23,21 @@
  * Etienne Saint-Paul
  */
 
+#include <ffbengine.h>
 #include "stdint.h"
 #include "types.h"
 #include "USBGameController.h"
-#include "ffb.h"
 #include "usb_device.h"
 #include "usbd_customhid.h"
 //#include "USBDevice_Types.h"
+#include "answer_filetypes.h"
 
 
 
 // remember to define constructor and destructor for your classes!
 USBGameController::USBGameController()
 {
-
+	gFFBDevice.SetFFB(&FFB);
 }
 USBGameController::~USBGameController() {
 
@@ -134,6 +135,12 @@ void USBGameController::_init()
 	Hat = 0x00;
 }
 
+void USBGameController::FfbOnCreateNewEffect() {
+	USBD_HandleTypeDef *pdev  = &hUsbDeviceFS;
+	USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
+	//FFB.FfbOnCreateNewEffect();
+	FFB.FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t *)hhid->Report_buf, &mSetReportAnswer);
+}
 
 #if 0
 bool USBGameController::USBCallback_request()
@@ -285,4 +292,9 @@ void USBGameController::set_mGetReportAnswer(uint8_t report_id) {
 	mGetReportAnswer.ramPoolSize = 0xffff;
 	mGetReportAnswer.maxSimultaneousEffects = MAX_EFFECTS;
 	mGetReportAnswer.memoryManagement = 3;
+}
+
+
+bool USBGameController::handleReceivedHIDReport(HID_REPORT report) {
+	return FFB.handleReceivedHIDReport(report);
 }

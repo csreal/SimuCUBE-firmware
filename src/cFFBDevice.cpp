@@ -5,8 +5,8 @@
  *      Author: Mika
  */
 
+#include <ffbengine.h>
 #include "cFFBDevice.h"
-#include "ffb.h"
 #include "command.h"
 
 cFFBDevice::cFFBDevice() {
@@ -18,6 +18,9 @@ cFFBDevice::~cFFBDevice() {
 	// TODO Auto-generated destructor stub
 }
 
+void cFFBDevice::SetFFB(FfbEngine* handle) {
+	ffbhandle = handle;
+}
 void cFFBDevice::SetDefault()	{
 	mConfig.SetDefault();
 }
@@ -31,11 +34,11 @@ s32 cFFBDevice::CalcTorqueCommand(s32 *readEncoderPos) {
 	{
 		for (u8 id = FIRST_EID; id <= MAX_EFFECTS; id++)
 		{
-			volatile cEffectState &ef = gEffectStates[id];
-			if (Btest(ef.state, MEffectState_Allocated | MEffectState_Playing))
+			volatile cEffectState* ef = ffbhandle->getEffectState(id);//gEffectStates[id];
+			if (Btest(ef->state, MEffectState_Allocated | MEffectState_Playing))
 			{
-				s32 mag = (((s32)ef.magnitude)*((s32)ef.gain)) >> 6;
-				switch (ef.type)
+				s32 mag = (((s32)ef->magnitude)*((s32)ef->gain)) >> 6;
+				switch (ef->type)
 				{
 				case USB_EFFECT_CONSTANT:
 					break;
@@ -52,7 +55,7 @@ s32 cFFBDevice::CalcTorqueCommand(s32 *readEncoderPos) {
 				case USB_EFFECT_SAWTOOTHUP:
 					break;
 				case USB_EFFECT_SPRING:
-					command += constrain(SpringEffect(ef.offset - pos, (mag*mConfig.profileConfig.mSpringGain) >> 7), -(ef.negativeSaturation << 8), ef.positiveSaturation << 8);
+					command += constrain(SpringEffect(ef->offset - pos, (mag*mConfig.profileConfig.mSpringGain) >> 7), -(ef->negativeSaturation << 8), ef->positiveSaturation << 8);
 					break;
 				case USB_EFFECT_FRICTION:
 					stat = smSetParameter(mSMBusHandle, 1, SMP_TORQUE_EFFECT_FRICTION, (mag*mConfig.profileConfig.mFrictionGain) >> 3);

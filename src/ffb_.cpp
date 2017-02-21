@@ -25,8 +25,8 @@
 */
 
 //#include "cFFBDevice.h"
-#include "ffb.h"
-#include "ffb_pro.h"
+#include <ffb_.h>
+#include <ffb_pro_.h>
 #include "USBGameController.h"
 
 //------------------------------------- Defines ----------------------------------------------------------

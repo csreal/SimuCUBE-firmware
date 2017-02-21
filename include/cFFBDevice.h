@@ -11,6 +11,7 @@
 #include "types.h"
 #include "cDeviceConfig.h"
 #include "../SimpleMotion/simplemotion.h"
+#include "ffbengine.h"
 
 class cFFBDevice {
 public:
@@ -18,6 +19,8 @@ public:
 	~cFFBDevice();
 
 	void SetDefault();
+
+	void SetFFB(FfbEngine* handle);
 
 	s32 CalcTorqueCommand(s32 *readEncoderPos);
 
@@ -28,6 +31,8 @@ public:
 
 	s32 ConstrainEffect(s32 val);
 	s32 SpringEffect(s32 err, s32 mag);
+private:
+	FfbEngine* ffbhandle;
 };
 
 #endif /* CFFBDEVICE_H_ */

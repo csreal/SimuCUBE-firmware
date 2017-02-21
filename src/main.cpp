@@ -106,14 +106,14 @@ static void MX_I2C1_Init(void);
 #include "usbd_customhid.h"
 
 
-#include "cFFBDevice.h"
+//#include "cFFBDevice.h"
+//cFFBDevice gFFBDevice;
 
-#include "ffb.h"
-
+#include <ffbengine.h>
+USBGameController joystick;
 #include "Command.h"
 
-cFFBDevice gFFBDevice;
-USBGameController joystick;
+
 
 enum SystemStatus {BeforeInit, DriveInit, DriveConnectionError, DriveWaitClearfaults, DriveWaitReady, DriveFWUnsupported, Operational };
 volatile SystemStatus currentSystemStatus=BeforeInit;
@@ -135,7 +135,8 @@ void FfbOnCreateNewEffect_wrapper() {
 	//USB_FFBReport_PIDBlockLoad_Feature_Data_t testout;
 	//FfbOnCreateNewEffect(&testin, &testout);
 
-	FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t *)hhid->Report_buf, joystick.get_mSetReportAnswer());
+	//FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t *)hhid->Report_buf, joystick.get_mSetReportAnswer());
+	joystick.FfbOnCreateNewEffect();
 }
 
 //works
@@ -292,13 +293,13 @@ void broadcastSystemStatus(SystemStatus status, bool stopHere=false)
 // search index pulse. Encoder is at 0 on startup.
 bool WaitForIndexPulse( int &indexPos )
 {
-	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_SYSTEM_CONTROL, 2048);
+	smSetParameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_SYSTEM_CONTROL, 2048);
 
 	bool found=false;
 	do
 	{
 		smint32 enc, status;
-		smRead2Parameters(gFFBDevice.mSMBusHandle, 1, SMP_DEBUGPARAM1, &enc, SMP_DEBUGPARAM2, &status);
+		smRead2Parameters(joystick.gFFBDevice.mSMBusHandle, 1, SMP_DEBUGPARAM1, &enc, SMP_DEBUGPARAM2, &status);
 		if(status==200)
 		{
 			found=true;
@@ -313,7 +314,7 @@ bool WaitForIndexPulse( int &indexPos )
 bool InitializeDrive()
 {
 	printf("1\r\n");
-	gFFBDevice.mSMBusHandle = smOpenBus("MBEDSERIAL");
+	joystick.gFFBDevice.mSMBusHandle = smOpenBus("MBEDSERIAL");
 	//SMSerial.baud(460800);
 	MX_USART3_UART_Init(); // inits to default 460800
 
@@ -324,19 +325,19 @@ bool InitializeDrive()
 
 	//clear sm bus error from previous session. hope not need it
 	smint32 dummy;
-	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &dummy);
-	resetCumulativeStatus(gFFBDevice.mSMBusHandle);
+	smRead1Parameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_FIRMWARE_VERSION, &dummy);
+	resetCumulativeStatus(joystick.gFFBDevice.mSMBusHandle);
 
 
-	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 0);
+	smSetParameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 0);
 	//read some ioni drive parameters
 	smint32 driveStatus=-1, initialPosition=-1, homingConfigurationBits, driveFWversion=-1, encoderResolution=-1;
-	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_FIRMWARE_VERSION, &driveFWversion);
-	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+	smRead3Parameters(joystick.gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_FIRMWARE_VERSION, &driveFWversion);
+	smRead1Parameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
 
 	//todo change these when cFFBDevice port is complete
-	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);//read encoder resolution from ioni.
-	gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*=4;//PPR to CPR
+	smRead1Parameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_ENCODER_PPR, &joystick.gFFBDevice.mConfig.hardwareConfig.mEncoderCPR);//read encoder resolution from ioni.
+	joystick.gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*=4;//PPR to CPR
 
 	//switch leds off
 	//defines work like this: #define LED4_OUT_Pin GPIO_PIN_12 #define LED4_OUT_GPIO_Port GPIOD
@@ -347,31 +348,31 @@ bool InitializeDrive()
 	//led4=led5=led6=0;
 
 	//comm error
-	if(getCumulativeStatus(gFFBDevice.mSMBusHandle)!=SM_OK)
+	if(getCumulativeStatus(joystick.gFFBDevice.mSMBusHandle)!=SM_OK)
 		broadcastSystemStatus(DriveConnectionError,true);
 	if(driveFWversion<1100)//V1092 would be enough, but it has bug in SMP_FAULT_BEHAVIOR which is fixed in the next version
 		broadcastSystemStatus(DriveFWUnsupported, true);
 
-	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULTS,0);//reset prev communication fault & others
+	smSetParameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_FAULTS,0);//reset prev communication fault & others
 
 	//disable enable drive watchdog: if communication is lost for over 1sec or has error, drive will go fault state
 	if(debugMode)
-		smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1|(100<<8));
+		smSetParameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1|(100<<8));
 
 	//if drive is in fault state, wait that user resets the faults with STO input
 	while(driveStatus&STAT_FAULTSTOP )
 	{
 		broadcastSystemStatus(DriveWaitClearfaults);
-		smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+		smRead3Parameters(joystick.gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
 		HAL_Delay(500);//wait(0.5);
 	}
 
-	smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+	smRead3Parameters(joystick.gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
 	//wait drive to initialize (wait for phasing & homing if configured)
 	while(!(driveStatus&STAT_SERVO_READY) )
 	{
 			broadcastSystemStatus(DriveWaitReady);
-			smRead3Parameters(gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
+			smRead3Parameters(joystick.gFFBDevice.mSMBusHandle, 1, SMP_STATUS, &driveStatus, SMP_ACTUAL_POSITION_FB,&initialPosition,SMP_TRAJ_PLANNER_HOMING_BITS,&homingConfigurationBits);
 			HAL_Delay(500);//wait(0.5);
 	}
 
@@ -390,7 +391,7 @@ bool InitializeDrive()
 	smint32 positionFB=0;
 	p1=SetTorque(0);//call this twice to have 16 bit differential encoder unwrapper initialized
 	p2=SetTorque(0);
-	smRead1Parameter(gFFBDevice.mSMBusHandle, 1, SMP_ACTUAL_POSITION_FB, &positionFB);//read 32 bit position
+	smRead1Parameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_ACTUAL_POSITION_FB, &positionFB);//read 32 bit position
 
 	// TODO at this time, the steering wheel should be driven too center
 	// defined by encoderOffsetValue variable
@@ -398,7 +399,7 @@ bool InitializeDrive()
 	resetPositionCountAt(positionFB);
 
 	//enable drive watchdog: if communication is lost for over 0.3sec or has error, drive will go fault state
-	smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1 | (30<<8));
+	smSetParameter(joystick.gFFBDevice.mSMBusHandle, 1, SMP_FAULT_BEHAVIOR, 1 | (30<<8));
 
 	//smSetTimeout(50);
 	//smSetParameter(gFFBDevice.mSMBusHandle, 1, SMP_BUS_SPEED,1000000);
@@ -459,8 +460,8 @@ int main(void)
   float steeringAngle = 0.0;
 
   // init min and max steering angles based on user profile.
-  float minSteeringAngle = (-1)*gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
-  float maxSteeringAngle = gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+  float minSteeringAngle = (-1)*joystick.gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
+  float maxSteeringAngle = joystick.gFFBDevice.mConfig.profileConfig.mMaxAngle/2;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -468,8 +469,8 @@ int main(void)
   debugMode=0;
   while (1) {
       s32 encoderCounter=0;
-      gFFBDevice.CalcTorqueCommand(&encoderCounter); //reads encoder counter too
-	    steeringAngle = (float)encoderCounter/(float)gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*360.0;
+      joystick.gFFBDevice.CalcTorqueCommand(&encoderCounter); //reads encoder counter too
+	    steeringAngle = (float)encoderCounter/(float)joystick.gFFBDevice.mConfig.hardwareConfig.mEncoderCPR*360.0;
 	    if(steeringAngle < minSteeringAngle) {
 	    	steeringAngle = minSteeringAngle;
 	    	// todo: endstop effect here!
@@ -497,7 +498,7 @@ int main(void)
 	       	joystick.handleReceivedHIDReport(recv_report);
       }
       // HAL_Delay = milliseconds
-      HAL_Delay(100);//wait(0.001*CONTROL_PERIOD_MS);
+      HAL_Delay(1);//wait(0.001*CONTROL_PERIOD_MS);
 
       //wait(0.001);
 
