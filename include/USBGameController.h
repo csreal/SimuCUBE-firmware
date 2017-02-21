@@ -13,7 +13,7 @@
 //#include "USBHID.h"
 #include "ffb.h"
 #include "USBHID_Types.h"
-
+#include "answer_filetypes.h"
 #if 0
  typedef struct {
      struct {
@@ -362,6 +362,8 @@ class USBGameController {
 
         USB_FFBReport_PIDPool_Feature_Data_t* get_mGetReportAnswer();
 		USB_FFBReport_PIDBlockLoad_Feature_Data_t* get_mSetReportAnswer();
+		void set_mSetReportAnswerId(uint8_t reportid);
+		void set_mGetReportAnswer(uint8_t reportid);
 
      private:
          bool FFBEnabled;
@@ -382,6 +384,7 @@ class USBGameController {
 
 		 USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnswer;
 		 USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnswer;
+
 	
          void _init();
 };

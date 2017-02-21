@@ -308,6 +308,7 @@ void FfbHandle_BlockFree (USB_FFBReport_BlockFree_Output_Data_t *data)
 #define ACTUATOR_OVERRIDE		0x08
 #define ACTUATOR_POWER			0x10
 
+
 void FfbHandle_DeviceControl(USB_FFBReport_DeviceControl_Output_Data_t *data)
 {
 	//	LogTextP(PSTR("Device Control: "));

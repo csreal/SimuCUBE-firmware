@@ -32,6 +32,7 @@
 
 #include "stdint.h"
 #include "types.h"
+#include "answer_filetypes.h"
 
 /* Type Defines: */
 /** Type define for the joystick HID report structure, for creating and sending HID reports to the host PC.
@@ -191,7 +192,7 @@ typedef struct
 	uint8_t	effectType;	// Enum (1..12): ET 26,27,30,31,32,33,34,40,41,42,43,28
 	uint16_t	byteCount;	// 0..511
 	} __attribute__((packed)) USB_FFBReport_CreateNewEffect_Feature_Data_t;
-
+#if 0
 typedef struct
 	{ // FFB: PID Block Load Feature Report
 	uint8_t	reportId;	// =2
@@ -200,6 +201,7 @@ typedef struct
 	uint16_t	ramPoolAvailable;	// =0 or 0xFFFF?
 	} __attribute__((packed)) USB_FFBReport_PIDBlockLoad_Feature_Data_t;
 
+
 typedef struct
 	{ // FFB: PID Pool Feature Report
 	uint8_t	reportId;	// =3
@@ -207,7 +209,7 @@ typedef struct
 	uint8_t		maxSimultaneousEffects;	// ?? 40?
 	uint8_t		memoryManagement;	// Bits: 0=DeviceManagedPool, 1=SharedParameterBlocks
 	} __attribute__((packed)) USB_FFBReport_PIDPool_Feature_Data_t;
-
+#endif
 // Lengths of each report type
 extern const uint16_t OutReportSize[];
 
@@ -219,7 +221,7 @@ void FfbSetDriver(uint8_t id);
 void FfbOnUsbData(uint8_t *data, uint16_t len);
 
 // Handle incoming feature requests
-void FfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData, USB_FFBReport_PIDBlockLoad_Feature_Data_t *outData);
+//void FfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData, USB_FFBReport_PIDBlockLoad_Feature_Data_t *outData);
 void FfbOnPIDPool(USB_FFBReport_PIDPool_Feature_Data_t *data);
 
 // Utility to wait any amount of milliseconds.
@@ -249,6 +251,7 @@ uint8_t FfbDebugListEffects(uint8_t *index);
 #define MEffectState_Playing		0x02
 
 #ifdef __cplusplus
+void FfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData, USB_FFBReport_PIDBlockLoad_Feature_Data_t *outData);
 class cEffectState
 {
 public:

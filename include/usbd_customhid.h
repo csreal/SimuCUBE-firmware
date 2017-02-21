@@ -28,7 +28,7 @@
 /* Define to prevent recursive inclusion -------------------------------------*/ 
 #ifndef __USB_CUSTOMHID_H
 #define __USB_CUSTOMHID_H
-#include "ffb.h"
+//#include "ffb.h"
 
 //USB_FFBReport_PIDPool_Feature_Data_t mGetReportAnswer;
 //USB_FFBReport_PIDBlockLoad_Feature_Data_t mSetReportAnswer;

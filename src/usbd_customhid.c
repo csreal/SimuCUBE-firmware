@@ -50,16 +50,7 @@
 #include "usbd_desc.h"
 #include "usbd_ctlreq.h"
 #include "ffb.h"
-
-
-#ifdef __cplusplus
- extern "C" {
-#endif
-#include "USBGameController.h"
-extern USBGameController joystick;
-#ifdef __cplusplus
- }
-#endif
+#include "answer_filetypes.h"
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
   * @{
@@ -498,9 +489,11 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 			printf("report_id=6\r\n");
 
 
-
+			send_mSetReportAnswer_wrapper();
+#if 0
 			USBD_CtlSendData(pdev,(uint8_t *)&mSetReportAnswer,sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
 			mSetReportAnswer.reportId = 0;
+#endif
 			return USBD_OK;
 			/*
 			USB_SendControl(0,(uint8_t *)&mSetReportAnswer,sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
@@ -511,11 +504,14 @@ static uint8_t  USBD_CUSTOM_HID_Setup (USBD_HandleTypeDef *pdev,
 		if (report_id == 7)
 		{
 			printf("report_id=7\r\n");
+			send_mGetReportAnswer_wrapper(report_id);
+#if 0
 			mGetReportAnswer.reportId = report_id;
 			mGetReportAnswer.ramPoolSize = 0xffff;
 			mGetReportAnswer.maxSimultaneousEffects = MAX_EFFECTS;
 			mGetReportAnswer.memoryManagement = 3;
 			USBD_CtlSendData(pdev,(uint8_t *)&mGetReportAnswer,sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
+#endif
 			return USBD_OK;
 			/*
 			mSetReportAnswer.reportId = report_id;

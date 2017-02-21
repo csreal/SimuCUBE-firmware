@@ -120,14 +120,39 @@ volatile SystemStatus currentSystemStatus=BeforeInit;
 
 
 extern "C" {
+//works
 uint8_t gamecontroller_callback_wrapper(uint8_t *report) {
 	return joystick.EPINT_OUT_callback(report);
 }
 
+//compile issue on FfbOnCreateNewEffect
 void FfbOnCreateNewEffect_wrapper() {
 	USBD_HandleTypeDef *pdev  = &hUsbDeviceFS;
 	USBD_CUSTOM_HID_HandleTypeDef *hhid = (USBD_CUSTOM_HID_HandleTypeDef*)pdev->pClassData;
+
+	//test
+	//USB_FFBReport_CreateNewEffect_Feature_Data_t testin;
+	//USB_FFBReport_PIDBlockLoad_Feature_Data_t testout;
+	//FfbOnCreateNewEffect(&testin, &testout);
+
 	FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t *)hhid->Report_buf, joystick.get_mSetReportAnswer());
+}
+
+//works
+void send_mSetReportAnswer_wrapper() {
+	USBD_HandleTypeDef *pdev  = &hUsbDeviceFS;
+
+	//USBD_CtlSendData(pdev,(uint8_t *)&mSetReportAnswer,sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
+	USBD_CtlSendData(pdev,(uint8_t *)joystick.get_mSetReportAnswer(),sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
+	joystick.set_mSetReportAnswerId(0); //mSetReportAnswer.reportId = 0;
+
+}
+
+//works
+void send_mGetReportAnswer_wrapper(uint8_t report_id) {
+	joystick.set_mGetReportAnswer(report_id); //mGetReportAnswer.reportId = report_id; also sets other members of struct.
+	USBD_HandleTypeDef *pdev  = &hUsbDeviceFS;
+	USBD_CtlSendData(pdev,(uint8_t *)joystick.get_mGetReportAnswer(),sizeof(USB_FFBReport_PIDPool_Feature_Data_t));
 }
 }
 /* USER CODE END 0 */

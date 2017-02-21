@@ -276,3 +276,13 @@ USB_FFBReport_PIDBlockLoad_Feature_Data_t* USBGameController::get_mSetReportAnsw
 	return &mSetReportAnswer;
 }
 
+void  USBGameController::set_mSetReportAnswerId(uint8_t reportid) {
+	mSetReportAnswer.reportId = reportid;
+}
+
+void USBGameController::set_mGetReportAnswer(uint8_t report_id) {
+	mGetReportAnswer.reportId = report_id;
+	mGetReportAnswer.ramPoolSize = 0xffff;
+	mGetReportAnswer.maxSimultaneousEffects = MAX_EFFECTS;
+	mGetReportAnswer.memoryManagement = 3;
+}
