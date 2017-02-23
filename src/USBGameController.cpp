@@ -265,7 +265,10 @@ uint8_t USBGameController::EPINT_OUT_callback( uint8_t *report)
 unsigned int USBGameController::getPendingReceivedReportCount()
 {
 	 //calculate how many reports are pending to read
-	 return (receivedReportBufferHead-receivedReportBufferTail)&(RX_REPORT_BUFFER_COUNT-1);
+	 int reportCount = (receivedReportBufferHead-receivedReportBufferTail)&(RX_REPORT_BUFFER_COUNT-1);
+	 if(reportCount) printf("have %d pending reports\r\n", reportCount);
+	 //return (receivedReportBufferHead-receivedReportBufferTail)&(RX_REPORT_BUFFER_COUNT-1);
+	 return reportCount;
 }
 
 HID_REPORT USBGameController::getReceivedReport()

@@ -6,6 +6,10 @@
  */
 
 #include "FfbEngine.h"
+#include "stdio.h"
+
+
+#define ffbDebug 1
 
 FfbEngine::FfbEngine() {
 	// TODO Auto-generated constructor stub
@@ -91,14 +95,17 @@ bool FfbEngine::handleReceivedHIDReport(HID_REPORT report)
 	switch (data[0])	// reportID
 	{
 	case 1:
+		if(ffbDebug) printf("got effect command\r\n");
 		//pc.printf("got effect command\r\n");
 		FfbHandle_SetEffect((USB_FFBReport_SetEffect_Output_Data_t *) data);
 
 		break;
 	case 2:
+		if(ffbDebug) printf("envolope command\r\n");
 		SetEnvelope((USB_FFBReport_SetEnvelope_Output_Data_t*) data, effectId);
 		break;
 	case 3:
+		if(ffbDebug) printf("got condition command\r\n");
 		SetCondition((USB_FFBReport_SetCondition_Output_Data_t*) data, effectId);
 		/*
 					LogText("Set Condition - offset : ");
@@ -108,43 +115,60 @@ bool FfbEngine::handleReceivedHIDReport(HID_REPORT report)
 					*/
 		break;
 	case 4:
+		if(ffbDebug) printf("got setPeriodic command\r\n");
 		SetPeriodic((USB_FFBReport_SetPeriodic_Output_Data_t*) data, effectId);
 		//			LogTextLf("Set Periodic");
 		break;
 	case 5:
+		if(ffbDebug) printf("got setConstantForce command\r\n");
 		SetConstantForce((USB_FFBReport_SetConstantForce_Output_Data_t*) data, effectId);
 		//			LogTextLf("Set Constant Force");
 		break;
 	case 6:
+		if(ffbDebug) printf("got setRampForce command\r\n");
 		SetRampForce((USB_FFBReport_SetRampForce_Output_Data_t*)data, effectId);
 		break;
 	case 7:
+		if(ffbDebug) printf("got setCustomForceData command\r\n");
 		FfbHandle_SetCustomForceData((USB_FFBReport_SetCustomForceData_Output_Data_t*) data);
 		break;
 	case 8:
+		if(ffbDebug) printf("got SetDownloadForceSample command\r\n");
 		FfbHandle_SetDownloadForceSample((USB_FFBReport_SetDownloadForceSample_Output_Data_t*) data);
 		break;
 	case 9:
+		if(ffbDebug) printf("got case 9 do nothing command\r\n");
 		break;
 	case 10:
+		if(ffbDebug) printf("got EffectOperation command\r\n");
 		FfbHandle_EffectOperation((USB_FFBReport_EffectOperation_Output_Data_t*) data);
 		break;
 	case 11:
+		if(ffbDebug) printf("got BlockFree command\r\n");
 		FfbHandle_BlockFree((USB_FFBReport_BlockFree_Output_Data_t *) data);
 		break;
 	case 12:
+		if(ffbDebug) printf("got DeviceControl command\r\n");
 		FfbHandle_DeviceControl((USB_FFBReport_DeviceControl_Output_Data_t*) data);
 		break;
 	case 13:
+		if(ffbDebug) printf("got DeviceGain command\r\n");
 		FfbHandle_DeviceGain((USB_FFBReport_DeviceGain_Output_Data_t*) data);
 		break;
 	case 14:
+
 		FfbHandle_SetCustomForce((USB_FFBReport_SetCustomForce_Output_Data_t*) data);
 		break;
+	case 128:
+		if(ffbDebug) printf("got a possible saveToEeprom command\r\n");
+		//gFFBDevice.mConfig.setProfile(&data[1]);
+		break;
 	case 129:
+		if(ffbDebug) printf("got a possible profileconfig command\r\n");
 		//gFFBDevice.mConfig.setProfile(&data[1]);
 		break;
 	case 130:
+		if(ffbDebug) printf("got a possible hardwareConfig command\r\n");
 		//gFFBDevice.mConfig.setHardware(&data[1]);
 		break;
 	default:

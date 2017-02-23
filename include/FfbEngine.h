@@ -275,6 +275,7 @@ private:
 	USB_FFBReport_PIDBlockLoad_Feature_Data_t gNewEffectBlockLoad;
 
 
+
 	void SendPidStateForEffect(uint8_t eid, uint8_t effectState);
 	uint8_t GetNextFreeEffect(void);
 	void StartEffect(uint8_t id);
